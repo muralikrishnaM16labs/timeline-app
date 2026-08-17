@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -294,3 +295,345 @@
 
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-touch-fullscreen" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Clock">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Clock</title>
+  <link rel="stylesheet" href="style.css?v=23">
+</head>
+<body>
+
+  <!--
+    WALLPAPER — a direct child of <body>, never nested inside a screen.
+    Its background is mirrored onto <html> by setWallpaperBackground() so that
+    iOS paints the same image into the safe areas (see style.css).
+  -->
+  <div id="wallpaper"></div>
+
+  <!--
+    capture="environment" sends iOS straight to the rear camera.
+    Hidden off-screen rather than with display:none — Safari silently ignores
+    a programmatic .click() on a file input that is not rendered.
+  -->
+  <input type="file" id="camera-input" class="hidden-file-input"
+    accept="image/*" capture="environment"/>
+
+  <!-- SCREEN 1 — PIN PAD -->
+  <div id="screen-pin">
+    <!-- Only the contents dim, so the black backdrop stays fully opaque. -->
+    <div id="pin-content">
+      <div id="pin-top">
+        <div id="pin-title">Enter Passcode</div>
+        <div id="pin-dots">
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+        </div>
+      </div>
+      <div id="pin-grid">
+        <div class="pin-btn" data-num="1">1</div>
+        <div class="pin-btn" data-num="2">2</div>
+        <div class="pin-btn" data-num="3">3</div>
+        <div class="pin-btn" data-num="4">4</div>
+        <div class="pin-btn" data-num="5">5</div>
+        <div class="pin-btn" data-num="6">6</div>
+        <div class="pin-btn" data-num="7">7</div>
+        <div class="pin-btn" data-num="8">8</div>
+        <div class="pin-btn" data-num="9">9</div>
+        <!-- Looks blank, like the Emergency key on iOS. Silently clears the
+             entry so a mis-tapped first digit can be taken back. -->
+        <div class="pin-btn empty" id="pin-clear"></div>
+        <div class="pin-btn" data-num="0">0</div>
+        <div class="pin-btn empty"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2 — HOME SCREEN -->
+  <div id="screen-home">
+
+    <!--
+      Our own status-bar clock, kept locked to the big clock by setDisplay().
+      iOS paints its real status bar OVER this area, so while that bar is
+      visible the two overlap. It reads correctly once the system bar is gone
+      (Guided Access, or a native shell). Toggle in Settings.
+    -->
+    <!--
+      Fake status bar. Both halves are off by default because iOS paints its
+      own bar over this area and they would double up. Turn them on when the
+      real bar is hidden — inside a fullscreen kiosk browser, say — and this
+      becomes the only status bar on screen.
+    -->
+    <div id="status-bar">
+      <div id="status-time">9:41</div>
+      <div id="status-right">
+        <!-- cellular bars -->
+        <svg width="18" height="12" viewBox="0 0 19 12" aria-hidden="true">
+          <rect x="0"    y="8.5" width="3.5" height="3.5" rx="1" fill="#fff"/>
+          <rect x="4.7"  y="5.8" width="3.5" height="6.2" rx="1" fill="#fff"/>
+          <rect x="9.4"  y="3"   width="3.5" height="9"   rx="1" fill="#fff"/>
+          <rect x="14.1" y="0"   width="3.5" height="12"  rx="1" fill="#fff"/>
+        </svg>
+        <!-- wifi -->
+        <svg width="17" height="12" viewBox="0 0 16 12" aria-hidden="true">
+          <path d="M8 11.4 L5.9 8.9 A3.1 3.1 0 0 1 10.1 8.9 Z" fill="#fff"/>
+          <path d="M3.9 6.6 A6.2 6.2 0 0 1 12.1 6.6" stroke="#fff"
+            stroke-width="1.7" fill="none" stroke-linecap="round"/>
+          <path d="M1.1 3.6 A10.4 10.4 0 0 1 14.9 3.6" stroke="#fff"
+            stroke-width="1.7" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- battery -->
+        <svg width="27" height="13" viewBox="0 0 28 13" aria-hidden="true">
+          <rect x="0.6" y="0.6" width="23.8" height="11.8" rx="3.4"
+            stroke="#fff" stroke-opacity="0.5" fill="none"/>
+          <rect id="battery-level" x="2.2" y="2.2" width="20.6" height="8.6"
+            rx="2.2" fill="#fff"/>
+          <path d="M26.1 4.4 v4.2 a2.2 2.2 0 0 0 0-4.2z" fill="#fff" fill-opacity="0.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div id="clock-wrap">
+      <div id="clock-date">Monday, June 10</div>
+      <div id="clock-time">9:41</div>
+    </div>
+
+    <div id="spacer"></div>
+
+    <div id="bottom-bar">
+      <!--
+        Both glyphs are single evenodd paths, so the flashlight's switch and the
+        camera's lens are real holes rather than shapes painted in a background
+        colour. That means they invert for free when the torch lights up and the
+        circle turns white.
+      -->
+      <div id="torch-btn">
+        <svg width="19" height="29" viewBox="0 0 22 34" aria-hidden="true">
+          <path id="torch-glyph" fill="#fff" fill-rule="evenodd" d="
+            M3.6 1.2 H18.4 Q20.1 1.2 19.6 2.9 L17.9 9.0
+            Q17.6 10.2 16.4 10.2 H5.6 Q4.4 10.2 4.1 9.0 L2.4 2.9
+            Q1.9 1.2 3.6 1.2 Z
+            M8.3 11.5 H13.7 Q16.4 11.5 16.4 14.2 V30.1
+            Q16.4 32.8 13.7 32.8 H8.3 Q5.6 32.8 5.6 30.1 V14.2
+            Q5.6 11.5 8.3 11.5 Z
+            M9.7 15.6 H12.3 Q13.3 15.6 13.3 16.6 V17.4
+            Q13.3 18.4 12.3 18.4 H9.7 Q8.7 18.4 8.7 17.4 V16.6
+            Q8.7 15.6 9.7 15.6 Z" />
+        </svg>
+      </div>
+      <div id="camera-btn">
+        <svg width="26" height="21" viewBox="0 0 28 22" aria-hidden="true">
+          <path id="camera-glyph" fill="#fff" fill-rule="evenodd" d="
+            M4.4 4.4 H9.0 L10.2 1.9 Q10.7 0.6 12.1 0.6 H15.9
+            Q17.3 0.6 17.8 1.9 L19.0 4.4 H23.6 Q27.4 4.4 27.4 8.2
+            V17.6 Q27.4 21.4 23.6 21.4 H4.4 Q0.6 21.4 0.6 17.6
+            V8.2 Q0.6 4.4 4.4 4.4 Z
+            M14 8.3 A4.6 4.6 0 1 0 14 17.5 A4.6 4.6 0 1 0 14 8.3 Z" />
+        </svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCREEN 3 — SECRET PANEL -->
+  <div id="screen-secret">
+    <div id="secret-inner">
+
+      <div class="secret-title">⚙ Settings</div>
+
+      <div class="settings-section">
+        <div class="section-title">Display Settings</div>
+        <div class="secret-row">
+          <label>Wallpaper</label>
+          <select id="wallpaper-select">
+            <option value="ios">iOS Default</option>
+            <option value="gradient1">Deep Purple</option>
+            <option value="gradient2">Midnight Blue</option>
+            <option value="gradient3">Dark Green</option>
+            <option value="gradient4">Deep Red</option>
+            <option value="gradient5">Pure Black</option>
+            <option value="gradient6">Ocean Blue</option>
+            <option value="gradient7">Sunset</option>
+            <option value="custom">Custom Photo</option>
+          </select>
+        </div>
+        <div class="secret-row" id="gallery-row" style="display:none">
+          <label>Choose Photo</label>
+          <input type="file" id="gallery-input" class="hidden-file-input"
+            accept="image/*"/>
+          <button id="gallery-btn">Open Gallery</button>
+        </div>
+        <div class="secret-row">
+          <label>Status Bar Time</label>
+          <!-- Defaults to Hidden: iOS draws its own status bar clock over
+               ours, so showing both gives doubled text. -->
+          <select id="statusbar-time">
+            <option value="hide" selected>Hidden</option>
+            <option value="show">Match big clock</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Status Bar Icons</label>
+          <!-- Signal, wifi and battery. Same reasoning as the time above:
+               only turn on when the real iOS bar is hidden. -->
+          <select id="statusbar-icons">
+            <option value="hide" selected>Hidden</option>
+            <option value="show">Show</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Battery Level</label>
+          <select id="battery-level-select">
+            <option value="100">100%</option>
+            <option value="80" selected>80%</option>
+            <option value="60">60%</option>
+            <option value="40">40%</option>
+            <option value="25">25%</option>
+            <option value="10">10%</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Clock Color</label>
+          <select id="clock-color">
+            <option value="#ffffff">White</option>
+            <option value="#f59e0b">Gold</option>
+            <option value="#22c55e">Green</option>
+            <option value="#8b5cf6">Purple</option>
+            <option value="#38bdf8">Blue</option>
+            <option value="#f472b6">Pink</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Clock Size</label>
+          <select id="clock-size">
+            <option value="72px">Small</option>
+            <option value="88px" selected>Medium</option>
+            <option value="104px">Large</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-title">Layout</div>
+        <!--
+          Auto reads the screen size and picks the matching profile, and its
+          label is rewritten at runtime to name what was detected. The explicit
+          models are for setting the prop up on a different machine, or for
+          overriding a detection that Display Zoom has thrown off.
+        -->
+        <div class="secret-row">
+          <label>Device</label>
+          <select id="device-select">
+            <option value="auto" selected>Auto</option>
+            <option value="320x568">iPhone SE (1st gen)</option>
+            <option value="375x667">iPhone 8 / SE</option>
+            <option value="414x736">iPhone 8 Plus</option>
+            <option value="375x812">iPhone X / 13 mini</option>
+            <option value="390x844">iPhone 12 / 13 / 14</option>
+            <option value="393x852">iPhone 15 / 16</option>
+            <option value="402x874">iPhone 16 Pro</option>
+            <option value="414x896">iPhone XR / 11</option>
+            <option value="428x926">iPhone 13 Pro Max</option>
+            <option value="430x932">iPhone 15 Pro Max</option>
+            <option value="440x956">iPhone 16 Pro Max</option>
+          </select>
+        </div>
+        <!-- Date and time move together as one group. -->
+        <div class="secret-row">
+          <label>Clock Position</label>
+          <select id="clock-offset">
+            <option value="-32">Much Higher</option>
+            <option value="-16">Higher</option>
+            <option value="0" selected>Auto</option>
+            <option value="16">Lower</option>
+            <option value="32">Much Lower</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Clock Align</label>
+          <select id="clock-align">
+            <option value="center" selected>Center</option>
+            <option value="flex-start">Left</option>
+            <option value="flex-end">Right</option>
+          </select>
+        </div>
+        <!-- Torch and camera move together as the other group. -->
+        <div class="secret-row">
+          <label>Buttons Position</label>
+          <select id="buttons-offset">
+            <option value="32">Much Higher</option>
+            <option value="16">Higher</option>
+            <option value="0" selected>Auto</option>
+            <option value="-8">Lower</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-title">Performance Settings</div>
+        <div class="secret-row">
+          <label>Time Direction</label>
+          <select id="tap-direction">
+            <option value="backward">Backward</option>
+            <option value="forward">Forward</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Unit</label>
+          <select id="tap-unit">
+            <option value="minutes">Minutes</option>
+            <option value="hours">Hours</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Roll Speed</label>
+          <select id="anim-speed">
+            <option value="slow">Slow</option>
+            <option value="medium" selected>Medium</option>
+            <option value="fast">Fast</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Trigger</label>
+          <select id="trigger-type">
+            <option value="tap">Tap</option>
+            <option value="tap-vibrate">Tap + Vibrate</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="status-text">Not set</div>
+      <button id="close-secret-btn">Close Settings</button>
+
+    </div>
+  </div>
+
+  <script src="script.js?v=23"></script>
+  <script>
+    /*
+     * Registers the precaching worker. Only runs in a secure context — over
+     * plain http:// (a LAN IP, say) registration is unavailable and the app
+     * simply runs without offline support.
+     */
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    }
+  </script>
+
+</body>
+</html>
+>>>>>>> ee6846f (Fix iPhone bottom band, drop padlock, add device-aware layout)

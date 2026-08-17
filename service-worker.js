@@ -14,13 +14,22 @@
  * Bump CACHE whenever the ?v= query strings in index.html change, or stale
  * assets will be served from the old cache.
  */
+<<<<<<< HEAD
 const CACHE = 'clock-v19';
+=======
+const CACHE = 'clock-v23';
+>>>>>>> ee6846f (Fix iPhone bottom band, drop padlock, add device-aware layout)
 
 const ASSETS = [
   './',
   './index.html',
+<<<<<<< HEAD
   './style.css?v=12',
   './script.js?v=12',
+=======
+  './style.css?v=23',
+  './script.js?v=23',
+>>>>>>> ee6846f (Fix iPhone bottom band, drop padlock, add device-aware layout)
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
