@@ -47,23 +47,15 @@
  * Edit LAYOUT_CONFIG in script.js, not this block.
  */
 :root {
-  --status-h:    47px;  /* status bar strip height              (% of height) */
-  --clock-gap:   47px;  /* strip bottom down to the date        (% of height) */
   --clock-side:  26px;  /* side inset of the date + time         (% of width) */
   --date-size:   17px;  /* date type size                        (% of width) */
   --time-size:   90px;  /* big clock type size                   (% of width) */
-  --bottom-gap:  22px;  /* buttons above the home indicator     (% of height) */
-  --btn-size:    52px;  /* torch/camera circle diameter          (% of width) */
-  --btn-side:    40px;  /* side inset of those circles           (% of width) */
   --clock-align: center;
 
   --date-gap:          3px;      /* date down to the clock         (% of height) */
   --clock-weight:      600;      /* clock font weight                  (raw 100-900) */
   --clock-tracking:    -0.0333em;/* clock letter-spacing, in its own em */
   --clock-opacity:     1;        /* clock transparency, as iOS 26.2 offers */
-  --glyph-scale:       1;        /* torch/camera glyphs, x their button-relative size */
-  --status-left:       34px;     /* status bar left "ear"           (% of width) */
-  --status-right:      20px;     /* status bar right cluster        (% of width) */
   --status-icon-scale: 1;        /* signal/wifi/battery, x their base size */
   --home-w:            134px;    /* home indicator width            (% of width) */
   --home-h:            5px;      /* home indicator thickness       (% of height) */
@@ -76,10 +68,23 @@
    * buttons, and a transformed ancestor forms a backdrop root, which would
    * clip the glass to the bar instead of sampling the wallpaper behind it.
    */
+  /* Per-item coordinates. Nothing here is shared, which is the point: every
+     value moves exactly one thing. */
+  --clock-y:           94px;     /* clock top                    (% of height) */
   --clock-x:           0px;      /* clock left/right nudge        (% of width) */
-  --btn-x:             0px;      /* torch+camera pair, as one     (% of width) */
-  --status-x:          0px;      /* status bar contents           (% of width) */
-  --status-y:          0px;      /* status bar contents          (% of height) */
+  --torch-x:           40px;     /* torch from the left edge      (% of width) */
+  --torch-y:           22px;     /* torch above the bottom       (% of height) */
+  --torch-size:        52px;     /* torch diameter                (% of width) */
+  --torch-glyph:       1;        /* torch glyph, x its base size */
+  --camera-x:          40px;     /* camera from the right edge    (% of width) */
+  --camera-y:          22px;     /* camera above the bottom      (% of height) */
+  --camera-size:       52px;     /* camera diameter               (% of width) */
+  --camera-glyph:      1;        /* camera glyph, x its base size */
+  --stime-x:           34px;     /* status clock from the left    (% of width) */
+  --stime-y:           14px;     /* status clock from the top    (% of height) */
+  --stime-size:        17px;     /* status clock type size        (% of width) */
+  --sicon-x:           20px;     /* status icons from the right   (% of width) */
+  --sicon-y:           17px;     /* status icons from the top    (% of height) */
   --home-x:            0px;      /* home indicator                (% of width) */
   /*
    * ONE font stack, in one place.
@@ -366,21 +371,30 @@ body {
  * so ours landed directly over the real ones and rendered doubled. Kept as a
  * 44px spacer purely so #clock-wrap keeps its existing vertical position.
  */
-#status-bar {
-  width: 100%;
-  height: var(--status-h);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* Left padding puts the clock in the "ear" beside the notch, where iOS
-     puts its own; the right padding matches for the icon cluster. */
-  padding: 0 var(--status-right) 0 var(--status-left);
-  z-index: 2;
-  position: relative;
-  left: var(--status-x);
-  top: var(--status-y);
+/*
+ * ── INDEPENDENT PLACEMENT ──
+ *
+ * Every item on the lock screen is absolutely positioned against #screen-home,
+ * so each one's coordinates are its own. Previously these sat in a flex column
+ * and the settings leaked into each other: raising the status bar's height
+ * pushed the clock down, and the torch and camera shared one padded row, so
+ * neither could move without the other.
+ *
+ * #status-bar and #bottom-bar survive only as markup wrappers — display:
+ * contents removes their boxes so their children position against the screen
+ * rather than against them, which is what makes the status time independent of
+ * the status bar height.
+ */
+#status-bar,
+#bottom-bar {
+  display: contents;
 }
+
+/* Held for the old flex column; nothing is in flow now. */
+#spacer {
+  display: none;
+}
+
 
 /*
  * File inputs must stay RENDERED to be openable from script on iOS —
@@ -388,15 +402,20 @@ body {
  * off-screen at 1px instead.
  */
 /*
- * applyStatusTime() and applyStatusIcons() have toggled this class since the
- * first build, but the rule itself was never written — so both settings did
- * nothing, and the fake status bar showed through underneath the real iOS one
- * however they were set. That doubling is the exact thing they exist to avoid.
+ * VISIBILITY, not display.
  *
- * !important because these are utility toggles competing with id-level rules.
+ * I previously wrote this as `display: none !important` on the belief that
+ * .hidden was undefined. It was not: #status-time.hidden and
+ * #status-right.hidden already existed and already worked, and they used
+ * visibility deliberately — collapsing those boxes would have let the
+ * remaining status bar content slide across. The !important override
+ * reintroduced exactly the shift they were written to prevent.
+ *
+ * visibility is the right primitive for every user of this class: it hides
+ * without ever disturbing anything else's position.
  */
 .hidden {
-  display: none !important;
+  visibility: hidden;
 }
 
 .hidden-file-input {
@@ -409,6 +428,10 @@ body {
 }
 
 #status-right {
+  position: absolute;
+  top: var(--sicon-y);
+  right: var(--sicon-x);
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -425,8 +448,12 @@ body {
  * iOS uses for the status bar, so this matches rather than approximates.
  */
 #status-time {
+  position: absolute;
+  top: var(--stime-y);
+  left: var(--stime-x);
+  z-index: 2;
   font-family: var(--font-ui);
-  font-size: 17px;
+  font-size: var(--stime-size);
   font-weight: 600;
   color: #fff;
   letter-spacing: 0.1px;
@@ -448,16 +475,20 @@ body {
  * centre it changes nothing, since the children are narrower than the screen.
  */
 #clock-wrap {
-  /* relative, so --clock-x shifts it without disturbing its siblings. This
-     also activates the z-index below, which was inert on a static box. */
-  position: relative;
+  /* Absolute, so its vertical position is its own rather than whatever the
+     status bar above happened to leave. left/right carry the horizontal nudge
+     as a pair, keeping the box full width so Clock Align still has room to
+     work — and avoiding a transform, which would break the glass clock. */
+  position: absolute;
+  top: var(--clock-y);
   left: var(--clock-x);
+  right: calc(-1 * var(--clock-x));
   display: flex;
   flex-direction: column;
   align-items: var(--clock-align);
   gap: var(--date-gap);
   z-index: 2;
-  padding: var(--clock-gap) var(--clock-side) 0;
+  padding: 0 var(--clock-side);
   flex-shrink: 0;
 }
 
@@ -493,22 +524,10 @@ body {
 /* BOTTOM BAR */
 /*
  * The button GROUP — torch and camera move together. The safe-area inset keeps
- * them clear of the real iOS home indicator; --bottom-gap is how far above it
+ * them clear of the real iOS home indicator; each button now carries its own
  * they sit, and that is what the device profile and the Layout setting tune.
  */
-#bottom-bar {
-  /* See --btn-x above: position, never transform, or the buttons' glass
-     stops sampling the wallpaper. */
-  position: relative;
-  left: var(--btn-x);
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--btn-side) calc(env(safe-area-inset-bottom, 0px) + var(--bottom-gap));
-  z-index: 2;
-  flex-shrink: 0;
-}
+
 
 /*
  * ── THE LOCK SCREEN BUTTONS ──
@@ -528,11 +547,30 @@ body {
  * The backdrop sampled is #wallpaper at z-index 0: #screen-home is transparent
  * and creates no backdrop root of its own, so the blur reaches it.
  */
+/*
+ * Each button carries its own coordinates and its own size. They used to share
+ * a padded flex row, which meant one could not be nudged without dragging the
+ * other with it. Positioned, never transformed: these carry backdrop-filter,
+ * and a transformed ancestor would form a backdrop root and clip the glass to
+ * the button instead of sampling the wallpaper behind it.
+ */
+#torch-btn {
+  left: var(--torch-x);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--torch-y));
+  width: var(--torch-size);
+  height: var(--torch-size);
+}
+#camera-btn {
+  right: var(--camera-x);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--camera-y));
+  width: var(--camera-size);
+  height: var(--camera-size);
+}
+
 #torch-btn,
 #camera-btn {
-  position: relative;
-  width: var(--btn-size);
-  height: var(--btn-size);
+  position: absolute;
+  z-index: 2;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -774,15 +812,15 @@ body {
    reference button, so at scale 1 this is pixel-identical to the fixed
    width/height attributes it overrides. */
 #torch-btn svg {
-  /* Height is measured off the real lock screen; width falls out of the
-     symbol's own 0.41 aspect rather than being guessed at. The old figures
-     described a torch 1.6x too wide, which is why it never looked right. */
-  height: calc(var(--btn-size) * 0.43 * var(--glyph-scale));
-  width:  calc(var(--btn-size) * 0.17782 * var(--glyph-scale));
+  /* Height measured off the real lock screen; width falls out of the symbol's
+     own 0.414 aspect rather than being guessed at. Keyed to this button's own
+     size and scale, so resizing one button leaves the other alone. */
+  height: calc(var(--torch-size) * 0.43 * var(--torch-glyph));
+  width:  calc(var(--torch-size) * 0.17782 * var(--torch-glyph));
 }
 #camera-btn svg {
-  width:  calc(var(--btn-size) * 0.45 * var(--glyph-scale));
-  height: calc(var(--btn-size) * 0.34884 * var(--glyph-scale));
+  width:  calc(var(--camera-size) * 0.45 * var(--camera-glyph));
+  height: calc(var(--camera-size) * 0.34884 * var(--camera-glyph));
 }
 
 /* Status bar icons, scaled from their own base sizes so each keeps its aspect

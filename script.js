@@ -50,58 +50,62 @@ const WP_MAX_CHARS = 2000000;
  */
 const LAYOUT_CONFIG = [
   /*
-   * Every element opens with the same three controls, in the same order:
+   * ONE GROUP PER ITEM, and every item's coordinates are its own.
    *
-   *   Vertical     where it sits up the screen   (% of height)
-   *   Horizontal   where it sits across          (% of width, signed)
-   *   Size         how big the whole thing is
+   * Each opens with the same three controls — Vertical, Horizontal, Size —
+   * then whatever else that item has. Because every element is absolutely
+   * positioned (see style.css), moving or resizing one CANNOT shift another:
+   * the torch and camera were previously one padded row and the clock sat
+   * below the status bar in flow, so those settings used to leak into each
+   * other. They no longer can.
    *
-   * Horizontal is a SIGNED NUDGE from wherever the element naturally sits, not
-   * an absolute coordinate: 0 leaves the stock iOS placement untouched, so the
-   * defaults still describe a real lock screen and these are corrections on
-   * top. The finer controls follow underneath, per element.
+   * Vertical means "down from the top" for the clock and status items, and
+   * "up from the bottom" for the torch, camera and home bar — each measured
+   * from the edge it actually sits against, so it stays put when the screen
+   * size changes. Horizontal is likewise from the nearer edge.
    */
 
   // ── Clock ──
-  { key: 'clockGap',      css: '--clock-gap',         label: 'Vertical',        group: 'Clock',      axis: 'h',     pct:  5.57, max: 40 },
-  { key: 'clockX',        css: '--clock-x',           label: 'Horizontal',      group: 'Clock',      axis: 'w',     pct:  0,    min: -40, max: 40 },
-  { key: 'timeSize',      css: '--time-size',         label: 'Size',            group: 'Clock',      axis: 'w',     pct: 32,    max: 60 },
-  { key: 'clockSide',     css: '--clock-side',        label: 'Side Inset',      group: 'Clock',      axis: 'w',     pct:  6.67, max: 30 },
-  { key: 'dateSize',      css: '--date-size',         label: 'Date Size',       group: 'Clock',      axis: 'w',     pct:  4.36, max: 10 },
-  { key: 'dateGap',       css: '--date-gap',          label: 'Date → Clock',    group: 'Clock',      axis: 'h',     pct:  0.36, max:  6 },
-  { key: 'clockWeight',   css: '--clock-weight',      label: 'Weight',          group: 'Clock',      axis: 'raw',   pct: 600,   min: 100, max: 900, step: 50 },
-  { key: 'clockTracking', css: '--clock-tracking',    label: 'Tracking',        group: 'Clock',      axis: 'em',    pct: -3.33, min: -8,  max: 3 },
-  { key: 'clockOpacity',  css: '--clock-opacity',     label: 'Opacity',         group: 'Clock',      axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
-  // Glass Clock Style only. Fill is the body alpha; Edge is the rim, in the
-  // clock's own em so it stays proportional as the clock is resized.
-  { key: 'glassFill',     css: '--clock-glass-fill',  label: 'Glass Fill',      group: 'Clock',      axis: 'ratio', pct:  55,   min:  5,  max: 100, step: 1 },
-  { key: 'glassEdge',     css: '--clock-glass-edge',  label: 'Glass Edge',      group: 'Clock',      axis: 'em',    pct:   0,   min:  0,  max:   3 },
+  { key: 'clockY',        css: '--clock-y',           label: 'Vertical',    group: 'Clock',        axis: 'h',     pct: 10,    max: 60 },
+  { key: 'clockX',        css: '--clock-x',           label: 'Horizontal',  group: 'Clock',        axis: 'w',     pct:  0,    min: -40, max: 40 },
+  { key: 'timeSize',      css: '--time-size',         label: 'Size',        group: 'Clock',        axis: 'w',     pct: 32,    max: 60 },
+  { key: 'clockSide',     css: '--clock-side',        label: 'Side Inset',  group: 'Clock',        axis: 'w',     pct:  6.67, max: 30 },
+  { key: 'dateSize',      css: '--date-size',         label: 'Date Size',   group: 'Clock',        axis: 'w',     pct:  4.36, max: 10 },
+  { key: 'dateGap',       css: '--date-gap',          label: 'Date → Clock',group: 'Clock',        axis: 'h',     pct:  0.36, max:  6 },
+  { key: 'clockWeight',   css: '--clock-weight',      label: 'Weight',      group: 'Clock',        axis: 'raw',   pct: 600,   min: 100, max: 900, step: 50 },
+  { key: 'clockTracking', css: '--clock-tracking',    label: 'Tracking',    group: 'Clock',        axis: 'em',    pct: -3.33, min: -8,  max: 3 },
+  { key: 'clockOpacity',  css: '--clock-opacity',     label: 'Opacity',     group: 'Clock',        axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
+  { key: 'glassFill',     css: '--clock-glass-fill',  label: 'Glass Fill',  group: 'Clock',        axis: 'ratio', pct:  55,   min:  5,  max: 100, step: 1 },
+  { key: 'glassEdge',     css: '--clock-glass-edge',  label: 'Glass Edge',  group: 'Clock',        axis: 'em',    pct:   0,   min:  0,  max:   3 },
 
-  // ── Buttons ──
-  { key: 'bottomGap',     css: '--bottom-gap',        label: 'Vertical',        group: 'Buttons',    axis: 'h',     pct:  2.61, max: 25 },
-  { key: 'btnX',          css: '--btn-x',             label: 'Horizontal',      group: 'Buttons',    axis: 'w',     pct:  0,    min: -30, max: 30 },
-  { key: 'btnSize',       css: '--btn-size',          label: 'Size',            group: 'Buttons',    axis: 'w',     pct: 13.33, max: 30 },
-  // Spread moves the two apart or together; Horizontal slides the pair as one.
-  { key: 'btnSide',       css: '--btn-side',          label: 'Spread',          group: 'Buttons',    axis: 'w',     pct: 10.26, max: 35 },
-  { key: 'glyphScale',    css: '--glyph-scale',       label: 'Glyph Size',      group: 'Buttons',    axis: 'ratio', pct: 100,   min: 30,  max: 170, step: 1 },
+  // ── Torch ──
+  { key: 'torchY',        css: '--torch-y',           label: 'Vertical',    group: 'Torch',        axis: 'h',     pct:  2.61, max: 40 },
+  { key: 'torchX',        css: '--torch-x',           label: 'Horizontal',  group: 'Torch',        axis: 'w',     pct:  9,    max: 45 },
+  { key: 'torchSize',     css: '--torch-size',        label: 'Size',        group: 'Torch',        axis: 'w',     pct: 12,    max: 30 },
+  { key: 'torchGlyph',    css: '--torch-glyph',       label: 'Glyph Size',  group: 'Torch',        axis: 'ratio', pct: 100,   min: 30,  max: 170, step: 1 },
 
-  // ── Status Bar ──
-  { key: 'statusY',       css: '--status-y',          label: 'Vertical',        group: 'Status Bar', axis: 'h',     pct:  0,    min: -10, max: 10 },
-  { key: 'statusX',       css: '--status-x',          label: 'Horizontal',      group: 'Status Bar', axis: 'w',     pct:  0,    min: -20, max: 20 },
-  { key: 'statusIcons',   css: '--status-icon-scale', label: 'Size',            group: 'Status Bar', axis: 'ratio', pct: 100,   min: 40,  max: 180, step: 1 },
-  // Height is the strip itself, which is also what pushes the clock down.
-  { key: 'statusH',       css: '--status-h',          label: 'Height',          group: 'Status Bar', axis: 'h',     pct:  5.57, max: 15 },
-  { key: 'statusLeft',    css: '--status-left',       label: 'Left Inset',      group: 'Status Bar', axis: 'w',     pct:  8.72, max: 25 },
-  { key: 'statusRight',   css: '--status-right',      label: 'Right Inset',     group: 'Status Bar', axis: 'w',     pct:  5.13, max: 25 },
+  // ── Camera ──
+  { key: 'cameraY',       css: '--camera-y',          label: 'Vertical',    group: 'Camera',       axis: 'h',     pct:  2.61, max: 40 },
+  { key: 'cameraX',       css: '--camera-x',          label: 'Horizontal',  group: 'Camera',       axis: 'w',     pct:  9,    max: 45 },
+  { key: 'cameraSize',    css: '--camera-size',       label: 'Size',        group: 'Camera',       axis: 'w',     pct: 12,    max: 30 },
+  { key: 'cameraGlyph',   css: '--camera-glyph',      label: 'Glyph Size',  group: 'Camera',       axis: 'ratio', pct: 100,   min: 30,  max: 170, step: 1 },
+
+  // ── Status Time ──
+  { key: 'stimeY',        css: '--stime-y',           label: 'Vertical',    group: 'Status Time',  axis: 'h',     pct:  1.66, max: 15 },
+  { key: 'stimeX',        css: '--stime-x',           label: 'Horizontal',  group: 'Status Time',  axis: 'w',     pct:  8.72, max: 45 },
+  { key: 'stimeSize',     css: '--stime-size',        label: 'Size',        group: 'Status Time',  axis: 'w',     pct:  4.36, max: 12 },
+
+  // ── Status Icons ──
+  { key: 'siconY',        css: '--sicon-y',           label: 'Vertical',    group: 'Status Icons', axis: 'h',     pct:  2.01, max: 15 },
+  { key: 'siconX',        css: '--sicon-x',           label: 'Horizontal',  group: 'Status Icons', axis: 'w',     pct:  5.13, max: 45 },
+  { key: 'statusIcons',   css: '--status-icon-scale', label: 'Size',        group: 'Status Icons', axis: 'ratio', pct: 100,   min: 40,  max: 180, step: 1 },
 
   // ── Home Bar ──
-  // Apple's indicator is 134 x 5 points sitting 8 above the bottom edge, which
-  // is what these percentages are on the 390x844 reference.
-  { key: 'homeGap',       css: '--home-gap',          label: 'Vertical',        group: 'Home Bar',   axis: 'h',     pct:  0.95, max:  8 },
-  { key: 'homeX',         css: '--home-x',            label: 'Horizontal',      group: 'Home Bar',   axis: 'w',     pct:  0,    min: -40, max: 40 },
-  { key: 'homeW',         css: '--home-w',            label: 'Size',            group: 'Home Bar',   axis: 'w',     pct: 34.36, max: 80 },
-  { key: 'homeH',         css: '--home-h',            label: 'Thickness',       group: 'Home Bar',   axis: 'h',     pct:  0.59, max:  3 },
-  { key: 'homeOpacity',   css: '--home-opacity',      label: 'Opacity',         group: 'Home Bar',   axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
+  { key: 'homeGap',       css: '--home-gap',          label: 'Vertical',    group: 'Home Bar',     axis: 'h',     pct:  0.95, max:  8 },
+  { key: 'homeX',         css: '--home-x',            label: 'Horizontal',  group: 'Home Bar',     axis: 'w',     pct:  0,    min: -40, max: 40 },
+  { key: 'homeW',         css: '--home-w',            label: 'Size',        group: 'Home Bar',     axis: 'w',     pct: 34.36, max: 80 },
+  { key: 'homeH',         css: '--home-h',            label: 'Thickness',   group: 'Home Bar',     axis: 'h',     pct:  0.59, max:  3 },
+  { key: 'homeOpacity',   css: '--home-opacity',      label: 'Opacity',     group: 'Home Bar',     axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
 ];
 
 /* Live values, seeded from the defaults above and overwritten by loadSettings. */
