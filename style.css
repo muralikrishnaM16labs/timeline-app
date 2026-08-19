@@ -69,6 +69,18 @@
   --home-h:            5px;      /* home indicator thickness       (% of height) */
   --home-gap:          8px;      /* above the very bottom edge     (% of height) */
   --home-opacity:      1;        /* home indicator alpha */
+
+  /*
+   * Signed placement nudges, one pair per element. Applied with position
+   * offsets rather than transform: #bottom-bar contains the backdrop-filter
+   * buttons, and a transformed ancestor forms a backdrop root, which would
+   * clip the glass to the bar instead of sampling the wallpaper behind it.
+   */
+  --clock-x:           0px;      /* clock left/right nudge        (% of width) */
+  --btn-x:             0px;      /* torch+camera pair, as one     (% of width) */
+  --status-x:          0px;      /* status bar contents           (% of width) */
+  --status-y:          0px;      /* status bar contents          (% of height) */
+  --home-x:            0px;      /* home indicator                (% of width) */
   /*
    * ONE font stack, in one place.
    *
@@ -366,6 +378,8 @@ body {
   padding: 0 var(--status-right) 0 var(--status-left);
   z-index: 2;
   position: relative;
+  left: var(--status-x);
+  top: var(--status-y);
 }
 
 /*
@@ -434,6 +448,10 @@ body {
  * centre it changes nothing, since the children are narrower than the screen.
  */
 #clock-wrap {
+  /* relative, so --clock-x shifts it without disturbing its siblings. This
+     also activates the z-index below, which was inert on a static box. */
+  position: relative;
+  left: var(--clock-x);
   display: flex;
   flex-direction: column;
   align-items: var(--clock-align);
@@ -479,6 +497,10 @@ body {
  * they sit, and that is what the device profile and the Layout setting tune.
  */
 #bottom-bar {
+  /* See --btn-x above: position, never transform, or the buttons' glass
+     stops sampling the wallpaper. */
+  position: relative;
+  left: var(--btn-x);
   width: 100%;
   display: flex;
   align-items: center;
@@ -794,7 +816,9 @@ body {
 #home-indicator {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  /* The centring translate and the nudge fold into one transform; a second
+     transform property would silently replace the first. */
+  transform: translateX(calc(-50% + var(--home-x)));
   /* Sits above the safe area, exactly as the real one does. */
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--home-gap));
   width: var(--home-w);
