@@ -57,6 +57,75 @@
   --btn-size:    52px;  /* torch/camera circle diameter          (% of width) */
   --btn-side:    40px;  /* side inset of those circles           (% of width) */
   --clock-align: center;
+
+  --date-gap:          3px;      /* date down to the clock         (% of height) */
+  --clock-weight:      600;      /* clock font weight                  (raw 100-900) */
+  --clock-tracking:    -0.0333em;/* clock letter-spacing, in its own em */
+  --clock-opacity:     1;        /* clock transparency, as iOS 26.2 offers */
+  --glyph-scale:       1;        /* torch/camera glyphs, x their button-relative size */
+  --status-left:       34px;     /* status bar left "ear"           (% of width) */
+  --status-right:      20px;     /* status bar right cluster        (% of width) */
+  --status-icon-scale: 1;        /* signal/wifi/battery, x their base size */
+  --home-w:            134px;    /* home indicator width            (% of width) */
+  --home-h:            5px;      /* home indicator thickness       (% of height) */
+  --home-gap:          8px;      /* above the very bottom edge     (% of height) */
+  --home-opacity:      1;        /* home indicator alpha */
+  --clock-rgb:         255, 255, 255;  /* Clock Color, as channels for rgba() */
+  --clock-glass-fill:  0.38;     /* glass clock body alpha */
+  --clock-glass-edge:  0.006em;  /* glass clock rim, in the clock's own em */
+
+  /*
+   * ── LIQUID GLASS (iOS 26) ──
+   * iOS 26.2 put a Liquid Glass control in Settings > Display & Brightness
+   * offering Clear and Tinted, and the two look materially different. Clear is
+   * the system default and is what these tokens describe; html.glass-tinted
+   * below is the Tinted variant. The prop has to match whichever the phone it
+   * runs on is set to, or the buttons read subtly wrong beside the real thing.
+   */
+  --glass-tint:          rgba(28, 28, 30, 0.26);
+  --glass-blur:          26px;
+  --glass-saturate:      200%;
+  --glass-brightness:    0.88;
+  --glass-sheen:         1;
+  --glass-rim-top:       rgba(255, 255, 255, 0.65);
+  --glass-rim-mid:       rgba(255, 255, 255, 0.10);
+  --glass-rim-bot:       rgba(255, 255, 255, 0.25);
+
+  /*
+   * The LIT torch, written by applyTorchLit().
+   *
+   * Kept apart from the Clear/Tinted tokens above because the lit appearance
+   * is a CHOICE (blue / white / wallpaper) crossed with the glass mode, and
+   * expressing that matrix in CSS would need one class per combination. JS
+   * resolves both together and writes the three values out here.
+   *
+   * Blue is the default because iOS 26 tints an ACTIVE control with the system
+   * accent colour, and the stock accent is blue. #0a84ff is Apple's systemBlue
+   * in dark contexts. A lit torch button is therefore blue glass with a white
+   * glyph — not the white disc with a black glyph that earlier iOS used.
+   */
+  --torch-lit-tint:       rgba(10, 132, 255, 0.55);
+  --torch-lit-brightness: 1.35;
+  --torch-lit-glow:       rgba(10, 132, 255, 0.45);
+  --torch-on-glyph:       #ffffff;
+}
+
+/*
+ * Tinted. Apple's own description is that it "increases opacity and adds more
+ * contrast" — it trades transparency for glyph legibility over a busy
+ * wallpaper. So the tint roughly doubles, the saturation lift comes back down
+ * (there is less backdrop showing to keep alive), and the rim softens, because
+ * a less transparent panel catches correspondingly less light at its edge.
+ */
+html.glass-tinted {
+  --glass-tint:          rgba(28, 28, 30, 0.58);
+  --glass-blur:          22px;
+  --glass-saturate:      150%;
+  --glass-brightness:    0.70;
+  --glass-sheen:         0.5;
+  --glass-rim-top:       rgba(255, 255, 255, 0.40);
+  --glass-rim-mid:       rgba(255, 255, 255, 0.08);
+  --glass-rim-bot:       rgba(255, 255, 255, 0.16);
 }
 
 html {
@@ -279,7 +348,7 @@ body {
   justify-content: space-between;
   /* Left padding puts the clock in the "ear" beside the notch, where iOS
      puts its own; the right padding matches for the icon cluster. */
-  padding: 0 20px 0 34px;
+  padding: 0 var(--status-right) 0 var(--status-left);
   z-index: 2;
   position: relative;
 }
@@ -289,6 +358,18 @@ body {
  * display:none makes Safari ignore .click() without any error. Parked
  * off-screen at 1px instead.
  */
+/*
+ * applyStatusTime() and applyStatusIcons() have toggled this class since the
+ * first build, but the rule itself was never written — so both settings did
+ * nothing, and the fake status bar showed through underneath the real iOS one
+ * however they were set. That doubling is the exact thing they exist to avoid.
+ *
+ * !important because these are utility toggles competing with id-level rules.
+ */
+.hidden {
+  display: none !important;
+}
+
 .hidden-file-input {
   position: fixed;
   left: -9999px;
@@ -341,7 +422,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: var(--clock-align);
-  gap: 0;
+  gap: var(--date-gap);
   z-index: 2;
   padding: var(--clock-gap) var(--clock-side) 0;
   flex-shrink: 0;
@@ -357,11 +438,12 @@ body {
 
 #clock-time {
   font-size: var(--time-size);
-  font-weight: 600;
+  font-weight: var(--clock-weight);
+  opacity: var(--clock-opacity);
   color: #ffffff;
-  /* Tracking has to scale with the type, or it reads cramped on a small phone
-     and loose on a large one. -0.0333em is the -3px the 90px reference used. */
-  letter-spacing: calc(var(--time-size) * -0.0333);
+  /* Tracking is expressed in the clock's OWN em, so it scales with the type
+     automatically: -0.0333em is the -3px the 90px reference size used. */
+  letter-spacing: var(--clock-tracking);
   line-height: 1.05;
   transition: color 0.3s, opacity 0.15s;
   font-family: 'Inter', -apple-system, 'Helvetica Neue', sans-serif;
@@ -391,43 +473,171 @@ body {
   flex-shrink: 0;
 }
 
+/*
+ * ── THE LOCK SCREEN BUTTONS ──
+ * Apple composes Liquid Glass from three layers, and all three have to be
+ * present or it reads as a flat translucent circle:
+ *
+ *   illumination   a tint laid over a blurred, saturated sample of whatever is
+ *                  behind it — the wallpaper shows THROUGH, it is not covered
+ *   highlight      a specular sheen down the face, plus a rim that is bright
+ *                  where the light lands and fades away round the back
+ *   shadow         an outer drop shadow that lifts the control off the
+ *                  wallpaper, so the two do not read as the same plane
+ *
+ * Every value comes from the tokens above, so switching Clear/Tinted restyles
+ * both buttons and both states without touching a single rule down here.
+ *
+ * The backdrop sampled is #wallpaper at z-index 0: #screen-home is transparent
+ * and creates no backdrop root of its own, so the blur reaches it.
+ */
 #torch-btn,
 #camera-btn {
+  position: relative;
   width: var(--btn-size);
   height: var(--btn-size);
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+
+  /* illumination */
+  background: var(--glass-tint);
+  /* The saturation lift is what sells it. A plain blur greys the wallpaper out
+     behind the glass; pushing saturation back up keeps that colour alive, and
+     that is the single biggest difference from a generic frosted panel. */
+  backdrop-filter:
+    blur(var(--glass-blur))
+    saturate(var(--glass-saturate))
+    brightness(var(--glass-brightness));
+  -webkit-backdrop-filter:
+    blur(var(--glass-blur))
+    saturate(var(--glass-saturate))
+    brightness(var(--glass-brightness));
+
+  /* shadow */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.34);
+
+  transition:
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    -webkit-backdrop-filter 0.22s ease,
+    backdrop-filter 0.22s ease,
+    transform 0.1s ease;
+}
+
+/* highlight, part 1 — the sheen across the face: strongest at the top where
+   the light lands, with a faint bounce returning along the bottom edge. */
+#torch-btn::before,
+#camera-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: var(--glass-sheen);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.24) 0%,
+    rgba(255, 255, 255, 0.07) 28%,
+    rgba(255, 255, 255, 0.00) 55%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  transition: opacity 0.22s ease;
+}
+
+/* highlight, part 2 — the rim. Painted as a gradient and then masked down to a
+   hairline ring, because a plain `border` can only be one flat colour the whole
+   way round, and a uniform ring is exactly what makes a glass disc read as a
+   sticker. Wrapped in @supports so that if the mask is unavailable there is
+   simply no rim, rather than a filled circle covering the glyph. */
+@supports ((-webkit-mask-composite: xor) or (mask-composite: exclude)) {
+  #torch-btn::after,
+  #camera-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    padding: 1px;
+    background: linear-gradient(
+      to bottom,
+      var(--glass-rim-top) 0%,
+      var(--glass-rim-mid) 45%,
+      var(--glass-rim-bot) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    transition: background 0.22s ease;
+  }
+}
+
+/* Both highlight layers are positioned, so the glyph needs lifting over them. */
+#torch-btn svg,
+#camera-btn svg {
+  position: relative;
+  z-index: 1;
 }
 
 #torch-btn:active,
 #camera-btn:active,
 #torch-btn.pressed,
 #camera-btn.pressed {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.22);
   transform: scale(0.93);
 }
 
-/* Torch lit — iOS flips the circle to solid white with a dark glyph. The
-   switch cut-out is a real hole, so it inverts along with it for free. */
+/*
+ * Torch lit — an ACTIVE control, which iOS 26 renders as ACCENT-TINTED GLASS.
+ *
+ * Two wrong turns are buried in this rule's history, and both were the same
+ * mistake. It began as a near-solid rgba(255,255,255,0.96) fill, which threw
+ * the material away: a white disc pasted onto the wallpaper. Then it became
+ * translucent white — better, but still the wrong colour, because an active
+ * Liquid Glass control does not go white, it takes the system accent.
+ *
+ * So the disc stays glass throughout and only its TINT changes with state. The
+ * fill never reaches opaque, and brightness() on the backdrop is what makes it
+ * read as lit from within rather than merely painted.
+ */
 #torch-btn.torch-on {
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--torch-lit-tint);
+  backdrop-filter:
+    blur(var(--glass-blur))
+    saturate(var(--glass-saturate))
+    brightness(var(--torch-lit-brightness));
+  -webkit-backdrop-filter:
+    blur(var(--glass-blur))
+    saturate(var(--glass-saturate))
+    brightness(var(--torch-lit-brightness));
   box-shadow:
-    0 2px 20px rgba(255, 255, 255, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 4px 22px var(--torch-lit-glow),
+    0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* Lit, the disc is catching light rather than sitting in shade, so the sheen
+   flattens off and the rim brightens the whole way round. */
+#torch-btn.torch-on::before {
+  opacity: calc(var(--glass-sheen) * 0.35);
+}
+#torch-btn.torch-on::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0.55) 100%
+  );
 }
 
 #torch-btn.torch-on #torch-glyph {
-  fill: #1c1c1e;
+  fill: var(--torch-on-glyph);
 }
 
 #torch-glyph,
@@ -435,11 +645,95 @@ body {
   transition: fill 0.18s ease;
 }
 
+/* The countback dims the clock on each step. This has to MULTIPLY the Clock
+   Opacity setting rather than replace it — the animation used to write
+   opacity inline, which reset any transparency the user had chosen. */
+/*
+ * THE GLASS CLOCK (iOS 26).
+ *
+ * The real lock screen numerals are not painted solid — they are the same
+ * Liquid Glass material as the buttons, so the wallpaper reads straight through
+ * them and only their edges catch the light. A gradient clipped to the text
+ * gives the body; a hairline stroke gives the rim.
+ *
+ * The channels come from --clock-rgb, which applyClockColor() writes from the
+ * chosen Clock Color, so the glass tints rather than being locked to white.
+ * Everything else is driven by the two sliders, which is why the gradient lives
+ * here in CSS instead of being rebuilt in JS on every drag.
+ */
+#clock-time.clock-glass {
+  background-image: linear-gradient(
+    155deg,
+    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 2.15)) 0%,
+    rgba(var(--clock-rgb), var(--clock-glass-fill))              45%,
+    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 1.75)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke:
+    var(--clock-glass-edge)
+    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 1.2));
+}
+
+#clock-time.roll-dim {
+  opacity: calc(var(--clock-opacity) * 0.4);
+}
+
+/* Glyphs sized from the button they sit in, so they hold their proportion at
+   every Button Size. The factors are each glyph's original size over the 52px
+   reference button, so at scale 1 this is pixel-identical to the fixed
+   width/height attributes it overrides. */
+#torch-btn svg {
+  width:  calc(var(--btn-size) * 0.36538 * var(--glyph-scale));
+  height: calc(var(--btn-size) * 0.55769 * var(--glyph-scale));
+}
+#camera-btn svg {
+  width:  calc(var(--btn-size) * 0.50000 * var(--glyph-scale));
+  height: calc(var(--btn-size) * 0.40385 * var(--glyph-scale));
+}
+
+/* Status bar icons, scaled from their own base sizes so each keeps its aspect
+   ratio rather than all three being forced to one height. */
+#status-right svg:nth-of-type(1) {
+  width:  calc(18px * var(--status-icon-scale));
+  height: calc(12px * var(--status-icon-scale));
+}
+#status-right svg:nth-of-type(2) {
+  width:  calc(17px * var(--status-icon-scale));
+  height: calc(12px * var(--status-icon-scale));
+}
+#status-right svg:nth-of-type(3) {
+  width:  calc(27px * var(--status-icon-scale));
+  height: calc(13px * var(--status-icon-scale));
+}
+
 
 /*
- * The fake #home-indicator was removed for the same reason as the status bar
- * icons: iOS draws the real one over the safe area, so ours doubled it.
+ * THE HOME INDICATOR — the pill along the very bottom of a Face ID iPhone.
+ *
+ * Positioned absolutely rather than added to the flex column, so switching it
+ * on cannot shift the torch and camera row sitting above it. #screen-home is
+ * position:fixed, which is the containing block this resolves against.
+ *
+ * Hidden by default for the same reason as the two status bar halves: iOS
+ * paints its own over the safe area and the two would double up. Turn it on
+ * only where the real one is gone — Guided Access, a kiosk browser, or a
+ * native shell.
  */
+#home-indicator {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  /* Sits above the safe area, exactly as the real one does. */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--home-gap));
+  width: var(--home-w);
+  height: var(--home-h);
+  /* Half the thickness keeps it a true pill at any height. */
+  border-radius: calc(var(--home-h) / 2);
+  background: rgba(255, 255, 255, var(--home-opacity));
+  z-index: 3;
+  pointer-events: none;
+}
 
 /* ── SCREEN 3 SECRET PANEL ── */
 #screen-secret {
@@ -625,6 +919,46 @@ body {
   border: 2px solid #0a0a0a;
   cursor: pointer;
 }
+/* Groups collapse so the panel opens short. Sixteen sliders laid out flat is
+   an unusable scroll on a phone; collapsed, the whole Layout section is four
+   taps tall and you open only the one you are working on. */
+.layout-group {
+  border-bottom: 1px solid #1a1a1a;
+}
+.layout-group summary {
+  padding: 11px 16px;
+  font-size: 14px;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  font-family: 'Inter', sans-serif;
+}
+.layout-group summary::-webkit-details-marker {
+  display: none;
+}
+.layout-group summary::after {
+  content: '\203a';
+  color: #666;
+  font-size: 18px;
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+.layout-group[open] summary::after {
+  transform: rotate(-90deg);
+}
+.layout-group[open] summary {
+  color: #8b5cf6;
+}
+/* Tighter than a normal .secret-row — these stack two deep. */
+.layout-group .layout-row {
+  padding: 6px 16px 12px;
+  gap: 6px;
+  border-bottom: none;
+}
+
 #layout-info {
   font-size: 11px;
   font-family: monospace;

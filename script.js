@@ -34,21 +34,51 @@ const WP_MAX_CHARS = 2000000;
  * Sizes key off width rather than height deliberately: width is what decides
  * whether the clock still fits on one line.
  *
- * The defaults are the real iOS lock screen measured on a 390x844 iPhone
- * 12/13/14 and converted, so out of the box this renders what it always did.
+ * Most defaults are the real iOS lock screen measured on a 390x844 iPhone
+ * 12/13/14 and converted. Clock Size and Glyph Size instead come from a real
+ * iOS 26 lock screen screenshot, which is a good deal bolder than the older
+ * layout was.
+ *
+ * Clock Size is capped at 36%. Width scales with the screen on both sides, so
+ * the ceiling is the same percentage on every phone: past roughly 37% a
+ * five-character time (10:00 through 12:59) runs wider than the space between
+ * the side insets. Since a quarter of the day shows five characters, going
+ * over would break the prop mid-performance rather than at setup.
  *
  * TO ADD A TUNABLE, ADD ONE LINE HERE. The settings slider, the CSS variable,
  * the live readout, saving and restoring are all generated from this list.
  */
 const LAYOUT_CONFIG = [
-  { key: 'statusH',   css: '--status-h',   label: 'Status Bar Height',  axis: 'h', pct:  5.57, max: 15 },
-  { key: 'clockGap',  css: '--clock-gap',  label: 'Clock Top Gap',      axis: 'h', pct:  5.57, max: 40 },
-  { key: 'clockSide', css: '--clock-side', label: 'Clock Side Inset',   axis: 'w', pct:  6.67, max: 30 },
-  { key: 'dateSize',  css: '--date-size',  label: 'Date Size',          axis: 'w', pct:  4.36, max: 10 },
-  { key: 'timeSize',  css: '--time-size',  label: 'Clock Size',         axis: 'w', pct: 23.08, max: 45 },
-  { key: 'bottomGap', css: '--bottom-gap', label: 'Buttons Bottom Gap', axis: 'h', pct:  2.61, max: 25 },
-  { key: 'btnSize',   css: '--btn-size',   label: 'Button Size',        axis: 'w', pct: 13.33, max: 30 },
-  { key: 'btnSide',   css: '--btn-side',   label: 'Buttons Side Inset', axis: 'w', pct: 10.26, max: 35 },
+  // ── Clock ──
+  { key: 'clockGap',      css: '--clock-gap',         label: 'Top Gap',         group: 'Clock',      axis: 'h',     pct:  5.57, max: 40 },
+  { key: 'clockSide',     css: '--clock-side',        label: 'Side Inset',      group: 'Clock',      axis: 'w',     pct:  6.67, max: 30 },
+  { key: 'dateSize',      css: '--date-size',         label: 'Date Size',       group: 'Clock',      axis: 'w',     pct:  4.36, max: 10 },
+  { key: 'dateGap',       css: '--date-gap',          label: 'Date → Clock',    group: 'Clock',      axis: 'h',     pct:  0.36, max:  6 },
+  { key: 'timeSize',      css: '--time-size',         label: 'Clock Size',      group: 'Clock',      axis: 'w',     pct: 32,    max: 36 },
+  { key: 'clockWeight',   css: '--clock-weight',      label: 'Clock Weight',    group: 'Clock',      axis: 'raw',   pct: 600,   min: 100, max: 900, step: 50 },
+  { key: 'clockTracking', css: '--clock-tracking',    label: 'Tracking',        group: 'Clock',      axis: 'em',    pct: -3.33, min: -8,  max: 3 },
+  { key: 'clockOpacity',  css: '--clock-opacity',     label: 'Clock Opacity',   group: 'Clock',      axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
+  // Glass Clock Style only. Fill is the body alpha; Edge is the rim, in the
+  // clock's own em so it stays proportional as the clock is resized.
+  { key: 'glassFill',     css: '--clock-glass-fill',  label: 'Glass Fill',      group: 'Clock',      axis: 'ratio', pct:  38,   min:  5,  max: 100, step: 1 },
+  { key: 'glassEdge',     css: '--clock-glass-edge',  label: 'Glass Edge',      group: 'Clock',      axis: 'em',    pct:   0.6, min:  0,  max:   3 },
+  // ── Buttons ──
+  { key: 'bottomGap',     css: '--bottom-gap',        label: 'Bottom Gap',      group: 'Buttons',    axis: 'h',     pct:  2.61, max: 25 },
+  { key: 'btnSize',       css: '--btn-size',          label: 'Button Size',     group: 'Buttons',    axis: 'w',     pct: 13.33, max: 30 },
+  { key: 'btnSide',       css: '--btn-side',          label: 'Side Inset',      group: 'Buttons',    axis: 'w',     pct: 10.26, max: 35 },
+  { key: 'glyphScale',    css: '--glyph-scale',       label: 'Glyph Size',      group: 'Buttons',    axis: 'ratio', pct:  82,   min: 30,  max: 170, step: 1 },
+  // ── Status Bar ──
+  { key: 'statusH',       css: '--status-h',          label: 'Height',          group: 'Status Bar', axis: 'h',     pct:  5.57, max: 15 },
+  { key: 'statusLeft',    css: '--status-left',       label: 'Left Inset',      group: 'Status Bar', axis: 'w',     pct:  8.72, max: 25 },
+  { key: 'statusRight',   css: '--status-right',      label: 'Right Inset',     group: 'Status Bar', axis: 'w',     pct:  5.13, max: 25 },
+  { key: 'statusIcons',   css: '--status-icon-scale', label: 'Icon Size',       group: 'Status Bar', axis: 'ratio', pct: 100,   min: 40,  max: 180, step: 1 },
+  // ── Home Bar ──
+  // Apple's indicator is 134 x 5 points sitting 8 above the bottom edge, which
+  // is what these percentages are on the 390x844 reference.
+  { key: 'homeW',         css: '--home-w',            label: 'Width',           group: 'Home Bar',   axis: 'w',     pct: 34.36, max: 80 },
+  { key: 'homeH',         css: '--home-h',            label: 'Thickness',       group: 'Home Bar',   axis: 'h',     pct:  0.59, max:  3 },
+  { key: 'homeGap',       css: '--home-gap',          label: 'Bottom Gap',      group: 'Home Bar',   axis: 'h',     pct:  0.95, max:  8 },
+  { key: 'homeOpacity',   css: '--home-opacity',      label: 'Opacity',         group: 'Home Bar',   axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
 ];
 
 /* Live values, seeded from the defaults above and overwritten by loadSettings. */
@@ -66,49 +96,95 @@ function layoutBasis(axis) {
   return axis === 'w' ? w : h;
 }
 
-/* One slider per entry, so LAYOUT_CONFIG stays the only thing to edit. */
+/*
+ * Turns one config entry's stored number into the string CSS wants, plus the
+ * label shown beside its slider.
+ *
+ *   w / h   a percentage of the viewport, resolved to px
+ *   raw     the number itself, unitless (font-weight)
+ *   ratio   a percentage expressed as 0-1 (opacity, scale factors)
+ *   em      a percentage expressed in the element's OWN em, so it tracks that
+ *           element's font-size without any recalculation here
+ */
+function resolveValue(c) {
+  const pct = layoutPct[c.key];
+  if (c.axis === 'raw')   return { css: String(Math.round(pct)), out: String(Math.round(pct)) };
+  if (c.axis === 'ratio') return { css: String(pct / 100), out: pct.toFixed(0) + '%' };
+  if (c.axis === 'em')    return { css: (pct / 100).toFixed(4) + 'em', out: pct.toFixed(2) + '%' };
+  const px = layoutBasis(c.axis) * pct / 100;
+  return { css: px.toFixed(2) + 'px', out: pct.toFixed(2) + '%', px: Math.round(px) };
+}
+
+/* One row: label, live readout, slider. */
+function buildLayoutRow(c) {
+  const row = document.createElement('div');
+  row.className = 'secret-row layout-row';
+
+  const head = document.createElement('div');
+  head.className = 'layout-head';
+
+  const label = document.createElement('label');
+  label.textContent = c.label;
+
+  const out = document.createElement('span');
+  out.className = 'pct-out';
+  out.id = 'out-' + c.key;
+
+  head.appendChild(label);
+  head.appendChild(out);
+
+  const slider = document.createElement('input');
+  slider.type  = 'range';
+  slider.id    = 'pct-' + c.key;
+  slider.min   = String(c.min === undefined ? 0 : c.min);
+  slider.max   = String(c.max);
+  slider.step  = String(c.step === undefined ? 0.01 : c.step);
+  slider.value = String(layoutPct[c.key]);
+
+  // 'input', not 'change', so the clock moves under the finger as the slider
+  // is dragged — placing it by eye is the whole point of a slider here.
+  slider.addEventListener('input', () => {
+    layoutPct[c.key] = parseFloat(slider.value) || 0;
+    applyLayout();
+  });
+  // Writing to storage on every drag frame would be wasteful; once the finger
+  // lifts is enough.
+  slider.addEventListener('change', saveSettings);
+
+  row.appendChild(head);
+  row.appendChild(slider);
+  return row;
+}
+
+/*
+ * Builds the sliders, grouped into collapsed <details> sections.
+ *
+ * Sixteen sliders laid out flat is an unusable scroll on a phone. Collapsed,
+ * the Layout section opens four rows tall and you expand only the group you
+ * are working on. The grouping comes from the config's own `group` field, so
+ * adding a tunable still means adding exactly one line.
+ */
 function buildLayoutControls() {
   const host = document.getElementById('layout-rows');
   if (!host || host.childElementCount) return;
 
+  const groups = [];
   LAYOUT_CONFIG.forEach((c) => {
-    const row = document.createElement('div');
-    row.className = 'secret-row layout-row';
+    let g = groups.find((x) => x.name === c.group);
+    if (!g) { g = { name: c.group, items: [] }; groups.push(g); }
+    g.items.push(c);
+  });
 
-    const head = document.createElement('div');
-    head.className = 'layout-head';
+  groups.forEach((g) => {
+    const details = document.createElement('details');
+    details.className = 'layout-group';
 
-    const label = document.createElement('label');
-    label.textContent = c.label;
+    const summary = document.createElement('summary');
+    summary.textContent = g.name;
+    details.appendChild(summary);
 
-    const out = document.createElement('span');
-    out.className = 'pct-out';
-    out.id = 'out-' + c.key;
-
-    head.appendChild(label);
-    head.appendChild(out);
-
-    const slider = document.createElement('input');
-    slider.type  = 'range';
-    slider.id    = 'pct-' + c.key;
-    slider.min   = '0';
-    slider.max   = String(c.max);
-    slider.step  = '0.01';
-    slider.value = String(layoutPct[c.key]);
-
-    // 'input', not 'change', so the clock moves under the finger as the slider
-    // is dragged — placing it by eye is the whole point of a slider here.
-    slider.addEventListener('input', () => {
-      layoutPct[c.key] = parseFloat(slider.value) || 0;
-      applyLayout();
-    });
-    // Writing to storage on every drag frame would be wasteful; once the finger
-    // lifts is enough.
-    slider.addEventListener('change', saveSettings);
-
-    row.appendChild(head);
-    row.appendChild(slider);
-    host.appendChild(row);
+    g.items.forEach((c) => details.appendChild(buildLayoutRow(c)));
+    host.appendChild(details);
   });
 }
 
@@ -121,25 +197,27 @@ function syncLayoutControls() {
 }
 
 /*
- * The single place percentages become pixels. Re-runs on resize and rotation,
+ * The single place stored numbers become CSS. Re-runs on resize and rotation,
  * so the proportions survive the phone being turned.
  */
 function applyLayout() {
   const root = document.documentElement.style;
 
   LAYOUT_CONFIG.forEach((c) => {
-    const px = layoutBasis(c.axis) * layoutPct[c.key] / 100;
-    root.setProperty(c.css, px.toFixed(2) + 'px');
+    const v = resolveValue(c);
+    root.setProperty(c.css, v.css);
 
-    // Show the percentage and what it currently resolves to, so a figure can be
-    // read off one phone and typed into another.
+    // Show the setting and, where there is one, what it currently resolves to
+    // — so a figure can be read off one phone and typed into another.
     const out = document.getElementById('out-' + c.key);
     if (out) {
-      out.textContent = layoutPct[c.key].toFixed(2) + '% ';
-      const px_ = document.createElement('span');
-      px_.className = 'px';
-      px_.textContent = '(' + Math.round(px) + 'px)';
-      out.appendChild(px_);
+      out.textContent = v.out + (v.px === undefined ? '' : ' ');
+      if (v.px !== undefined) {
+        const px_ = document.createElement('span');
+        px_.className = 'px';
+        px_.textContent = '(' + v.px + 'px)';
+        out.appendChild(px_);
+      }
     }
   });
 
@@ -149,12 +227,11 @@ function applyLayout() {
   const info = document.getElementById('layout-info');
   if (info) {
     info.textContent =
-      'viewport ' + Math.round(layoutBasis('w')) + '×' + Math.round(layoutBasis('h')) +
-      '   device ' + screen.width + '×' + screen.height;
+      'viewport ' + Math.round(layoutBasis('w')) + '\u00d7' + Math.round(layoutBasis('h')) +
+      '   device ' + screen.width + '\u00d7' + screen.height;
   }
 }
 
-/* Back to the measured iOS proportions, discarding any hand-tuning. */
 function resetLayout() {
   LAYOUT_CONFIG.forEach((c) => { layoutPct[c.key] = c.pct; });
   syncLayoutControls();
@@ -212,6 +289,7 @@ function sampleImageEdgeColor(url) {
       const px = ctx.getImageData(0, 0, 1, 1).data;
       wallpaperEdgeColor = 'rgb(' + px[0] + ',' + px[1] + ',' + px[2] + ')';
       syncCanvasColor();
+      applyTorchLit();
     } catch (err) {
       // A tainted canvas can't be read. Our wallpapers are data: URLs so this
       // shouldn't happen, but a failure here must only cost the edge colour.
@@ -280,6 +358,9 @@ function setWallpaperBackground(value, isImage) {
   wallpaperImage     = image;
   wallpaperEdgeColor = color;
   syncCanvasColor();
+  // Wallpaper mode derives the lit tint from wallpaperEdgeColor, so it has to
+  // be recomputed on every repaint, not only when the setting changes.
+  applyTorchLit();
 
   // A photo's edge colour arrives once the image has decoded; until then the
   // strip stays black, which is what it was doing anyway.
@@ -320,12 +401,18 @@ function saveSettings() {
   const settings = {
     wallpaper:  document.getElementById('wallpaper-select').value,
     clockColor: document.getElementById('clock-color').value,
+    glassMode:  document.getElementById('glass-mode').value,
+    clockStyle: document.getElementById('clock-style').value,
+    dateFormat: document.getElementById('date-format').value,
+    torchLit:   document.getElementById('torch-lit').value,
+    torchGlyph: document.getElementById('torch-glyph-mode').value,
     // One object holding every percentage, so adding a tunable needs no change
     // here at all.
     layout:     Object.assign({}, layoutPct),
     clockAlign: document.getElementById('clock-align').value,
     statusTime:  document.getElementById('statusbar-time').value,
     statusIcons: document.getElementById('statusbar-icons').value,
+    homeBar:     document.getElementById('home-indicator-toggle').value,
     battery:     document.getElementById('battery-level-select').value,
     direction:  document.getElementById('tap-direction').value,
     unit:       document.getElementById('tap-unit').value,
@@ -354,6 +441,11 @@ function loadSettings() {
   }
   if (s.wallpaper)  document.getElementById('wallpaper-select').value = s.wallpaper;
   if (s.clockColor) document.getElementById('clock-color').value      = s.clockColor;
+  if (s.glassMode)  document.getElementById('glass-mode').value       = s.glassMode;
+  if (s.clockStyle) document.getElementById('clock-style').value      = s.clockStyle;
+  if (s.dateFormat) document.getElementById('date-format').value      = s.dateFormat;
+  if (s.torchLit)   document.getElementById('torch-lit').value        = s.torchLit;
+  if (s.torchGlyph) document.getElementById('torch-glyph-mode').value = s.torchGlyph;
   // Only keys still listed in LAYOUT_CONFIG are taken, so a value saved by an
   // older build for a tunable that no longer exists is ignored rather than
   // resurrecting a dead CSS variable. A 0 is a legitimate setting, so this
@@ -367,6 +459,7 @@ function loadSettings() {
   if (s.clockAlign)  document.getElementById('clock-align').value          = s.clockAlign;
   if (s.statusTime)  document.getElementById('statusbar-time').value       = s.statusTime;
   if (s.statusIcons) document.getElementById('statusbar-icons').value      = s.statusIcons;
+  if (s.homeBar)     document.getElementById('home-indicator-toggle').value = s.homeBar;
   if (s.battery)     document.getElementById('battery-level-select').value = s.battery;
   if (s.direction)  document.getElementById('tap-direction').value    = s.direction;
   if (s.unit)       document.getElementById('tap-unit').value         = s.unit;
@@ -443,9 +536,106 @@ function storeCustomWallpaper(dataUrl) {
   }
 }
 
+/*
+ * iOS 26.2 added a Liquid Glass control under Settings > Display & Brightness
+ * with exactly these two modes. They look materially different, so the prop
+ * has to be set to match the phone it runs on — otherwise the buttons read
+ * subtly wrong sitting beside a real lock screen.
+ */
+function applyGlassMode() {
+  const tinted = document.getElementById('glass-mode').value === 'tinted';
+  document.documentElement.classList.toggle('glass-tinted', tinted);
+}
+
+/* Apple's systemBlue in dark contexts — the stock iOS accent. */
+const SYSTEM_BLUE = { r: 10, g: 132, b: 255 };
+
+/* Translucent rather than opaque: on a glass control nothing should be solid,
+   or that part stops belonging to the material. */
+const TORCH_GLYPH_DARK = 'rgba(28, 28, 30, 0.78)';
+
+/*
+ * Reads a colour that arrives either as a hex string from a gradient stop or
+ * as rgb() from the photo sampler. Returns null when it cannot parse, so
+ * callers fall back rather than emitting an invalid value that CSS would drop.
+ */
+function parseColor(color) {
+  const hex = String(color).match(/^#([0-9a-f]{3,8})$/i);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return [r, g, b].some(isNaN) ? null : { r, g, b };
+  }
+  const m = String(color).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  return m ? { r: +m[1], g: +m[2], b: +m[3] } : null;
+}
+
+/*
+ * The whole lit-torch appearance: disc tint, backdrop brightness, glow and
+ * glyph, resolved together.
+ *
+ * Disc and glyph cannot be decided independently — a dark glyph is right on a
+ * white disc and unreadable on a blue one — which is why Auto exists and why
+ * this is one function rather than two.
+ *
+ * The glass mode matters too: Tinted passes less backdrop through, so there is
+ * less light to amplify. It needs a heavier fill and a much lower brightness,
+ * or Clear's settings would blow it out to flat colour.
+ */
+function applyTorchLit() {
+  const litSel = document.getElementById('torch-lit');
+  const glyphSel = document.getElementById('torch-glyph-mode');
+  if (!litSel || !glyphSel) return;
+
+  const lit = litSel.value;
+  const tinted = document.documentElement.classList.contains('glass-tinted');
+  const root = document.documentElement.style;
+
+  let rgb = SYSTEM_BLUE;
+  let brightness = tinted ? 1.05 : 1.35;
+
+  if (lit === 'white') {
+    rgb = { r: 255, g: 255, b: 255 };
+    brightness = tinted ? 1.6 : 2.8;
+  } else if (lit === 'wallpaper') {
+    rgb = parseColor(wallpaperEdgeColor) || SYSTEM_BLUE;
+    brightness = tinted ? 1.2 : 1.7;
+  }
+
+  const alpha = tinted ? 0.78 : 0.55;
+  const rgbStr = rgb.r + ', ' + rgb.g + ', ' + rgb.b;
+  root.setProperty('--torch-lit-tint', 'rgba(' + rgbStr + ', ' + alpha + ')');
+  root.setProperty('--torch-lit-brightness', String(brightness));
+  root.setProperty('--torch-lit-glow', 'rgba(' + rgbStr + ', 0.45)');
+
+  // Auto contrasts against the disc: only a white disc wants a dark glyph.
+  let glyph;
+  if (glyphSel.value === 'white')     glyph = '#ffffff';
+  else if (glyphSel.value === 'dark') glyph = TORCH_GLYPH_DARK;
+  else                                glyph = lit === 'white' ? TORCH_GLYPH_DARK : '#ffffff';
+  root.setProperty('--torch-on-glyph', glyph);
+}
+
+/*
+ * Clock colour, for both styles.
+ *
+ * Glass needs the colour as raw channels so CSS can build rgba() stops from it
+ * at several alphas; solid just paints it. In glass the element's own colour
+ * must go transparent, or it would paint over the clipped gradient.
+ */
 function applyClockColor() {
   const color = document.getElementById('clock-color').value;
-  document.getElementById('clock-time').style.color = color;
+  const el    = document.getElementById('clock-time');
+  const styleSel = document.getElementById('clock-style');
+  const glass = !styleSel || styleSel.value === 'glass';
+  const c = parseColor(color) || { r: 255, g: 255, b: 255 };
+
+  el.classList.toggle('clock-glass', glass);
+  document.documentElement.style.setProperty('--clock-rgb', c.r + ', ' + c.g + ', ' + c.b);
+  el.style.color = glass ? 'transparent' : color;
 }
 
 function applyStatusTime() {
@@ -462,6 +652,15 @@ function applyStatusIcons() {
  * Draws the battery fill. navigator.getBattery() does not exist in Safari, so
  * the level is a setting rather than the real charge.
  */
+/*
+ * The home indicator is off unless explicitly switched on, matching the status
+ * bar halves — on a stock iPhone the real one is already there.
+ */
+function applyHomeIndicator() {
+  const show = document.getElementById('home-indicator-toggle').value === 'show';
+  document.getElementById('home-indicator').classList.toggle('hidden', !show);
+}
+
 function applyBatteryLevel() {
   const pct  = parseInt(document.getElementById('battery-level-select').value, 10) || 100;
   const rect = document.getElementById('battery-level');
@@ -473,10 +672,13 @@ function applyBatteryLevel() {
 
 function applyAllSettings() {
   applyLayout();
+  applyGlassMode();
   applyWallpaper();
+  applyTorchLit();
   applyClockColor();
   applyStatusTime();
   applyStatusIcons();
+  applyHomeIndicator();
   applyBatteryLevel();
 }
 
@@ -640,15 +842,34 @@ function lockToPasscode() {
   setTimeout(() => setPinDim(true), 1000);
 }
 
+const DAYS_FULL   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS_SHORT  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS_FULL = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun',
+                      'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/*
+ * The unlock path and the running clock each carried their own copy of these
+ * tables and their own formatting, which is exactly how two renderings of the
+ * same date drift apart. One function now, and the setting applies to both.
+ *
+ * iOS 26 abbreviates on the lock screen — "Tue Apr 1" — which is why short is
+ * the default; full is there for older iOS.
+ */
+function formatDate(now) {
+  const sel = document.getElementById('date-format');
+  if (!sel || sel.value === 'short') {
+    return DAYS_SHORT[now.getDay()] + ' ' + MONTHS_SHORT[now.getMonth()] + ' ' + now.getDate();
+  }
+  return DAYS_FULL[now.getDay()] + ', ' + MONTHS_FULL[now.getMonth()] + ' ' + now.getDate();
+}
+
 function unlockToLockScreen() {
   stopRealClock();
 
-  const now    = new Date();
-  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months = ['January','February','March','April','May','June',
-                  'July','August','September','October','November','December'];
-  document.getElementById('clock-date').textContent =
-    days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate();
+  const now = new Date();
+  document.getElementById('clock-date').textContent = formatDate(now);
 
   targetShowing = true;
   applyAllSettings();
@@ -765,18 +986,7 @@ function updateRealClock() {
   const m   = now.getMinutes();
   h = h % 12 || 12;
   setDisplay(h, m);
-  const days = [
-    'Sunday','Monday','Tuesday','Wednesday',
-    'Thursday','Friday','Saturday'
-  ];
-  const months = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
-  ];
-  document.getElementById('clock-date').textContent =
-    days[now.getDay()] + ', ' +
-    months[now.getMonth()] + ' ' +
-    now.getDate();
+  document.getElementById('clock-date').textContent = formatDate(now);
 }
 
 // ── OFFSET CLOCK ──
@@ -877,9 +1087,11 @@ function rollBackToIST() {
     if (newTotal < 0)        newTotal += 12 * 60;
     const { h, m } = fromTotal(newTotal);
     setDisplay(h, m);
-    clockEl.style.opacity = '0.4';
+    // A class, not inline opacity: the Clock Opacity setting has to survive
+    // the countback, and an inline write would replace it rather than dim it.
+    clockEl.classList.add('roll-dim');
     setTimeout(() => {
-      clockEl.style.opacity = '1';
+      clockEl.classList.remove('roll-dim');
     }, stepDelay / 2);
   }, stepDelay);
 }
@@ -996,6 +1208,20 @@ document.addEventListener('DOMContentLoaded', () => {
     .addEventListener('change', () => { applyWallpaper(); saveSettings(); });
   document.getElementById('clock-color')
     .addEventListener('change', () => { applyClockColor(); saveSettings(); });
+  document.getElementById('clock-style')
+    .addEventListener('change', () => { applyClockColor(); saveSettings(); });
+  // Redraw immediately rather than waiting for the next tick of the clock.
+  document.getElementById('date-format')
+    .addEventListener('change', () => {
+      document.getElementById('clock-date').textContent = formatDate(new Date());
+      saveSettings();
+    });
+  document.getElementById('glass-mode')
+    .addEventListener('change', () => { applyGlassMode(); applyTorchLit(); saveSettings(); });
+  document.getElementById('torch-lit')
+    .addEventListener('change', () => { applyTorchLit(); saveSettings(); });
+  document.getElementById('torch-glyph-mode')
+    .addEventListener('change', () => { applyTorchLit(); saveSettings(); });
   // The percentage sliders wire themselves up inside buildLayoutControls().
   document.getElementById('clock-align')
     .addEventListener('change', () => { applyLayout(); saveSettings(); });
@@ -1005,6 +1231,8 @@ document.addEventListener('DOMContentLoaded', () => {
     .addEventListener('change', () => { applyStatusTime(); saveSettings(); });
   document.getElementById('statusbar-icons')
     .addEventListener('change', () => { applyStatusIcons(); saveSettings(); });
+  document.getElementById('home-indicator-toggle')
+    .addEventListener('change', () => { applyHomeIndicator(); saveSettings(); });
   document.getElementById('battery-level-select')
     .addEventListener('change', () => { applyBatteryLevel(); saveSettings(); });
   document.getElementById('tap-direction')
