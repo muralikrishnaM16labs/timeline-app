@@ -60,13 +60,13 @@ const LAYOUT_CONFIG = [
   { key: 'clockOpacity',  css: '--clock-opacity',     label: 'Clock Opacity',   group: 'Clock',      axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
   // Glass Clock Style only. Fill is the body alpha; Edge is the rim, in the
   // clock's own em so it stays proportional as the clock is resized.
-  { key: 'glassFill',     css: '--clock-glass-fill',  label: 'Glass Fill',      group: 'Clock',      axis: 'ratio', pct:  38,   min:  5,  max: 100, step: 1 },
-  { key: 'glassEdge',     css: '--clock-glass-edge',  label: 'Glass Edge',      group: 'Clock',      axis: 'em',    pct:   0.6, min:  0,  max:   3 },
+  { key: 'glassFill',     css: '--clock-glass-fill',  label: 'Glass Fill',      group: 'Clock',      axis: 'ratio', pct:  55,   min:  5,  max: 100, step: 1 },
+  { key: 'glassEdge',     css: '--clock-glass-edge',  label: 'Glass Edge',      group: 'Clock',      axis: 'em',    pct:   0,   min:  0,  max:   3 },
   // ── Buttons ──
   { key: 'bottomGap',     css: '--bottom-gap',        label: 'Bottom Gap',      group: 'Buttons',    axis: 'h',     pct:  2.61, max: 25 },
   { key: 'btnSize',       css: '--btn-size',          label: 'Button Size',     group: 'Buttons',    axis: 'w',     pct: 13.33, max: 30 },
   { key: 'btnSide',       css: '--btn-side',          label: 'Side Inset',      group: 'Buttons',    axis: 'w',     pct: 10.26, max: 35 },
-  { key: 'glyphScale',    css: '--glyph-scale',       label: 'Glyph Size',      group: 'Buttons',    axis: 'ratio', pct:  82,   min: 30,  max: 170, step: 1 },
+  { key: 'glyphScale',    css: '--glyph-scale',       label: 'Glyph Size',      group: 'Buttons',    axis: 'ratio', pct: 100,   min: 30,  max: 170, step: 1 },
   // ── Status Bar ──
   { key: 'statusH',       css: '--status-h',          label: 'Height',          group: 'Status Bar', axis: 'h',     pct:  5.57, max: 15 },
   { key: 'statusLeft',    css: '--status-left',       label: 'Left Inset',      group: 'Status Bar', axis: 'w',     pct:  8.72, max: 25 },
@@ -177,7 +177,7 @@ function buildLayoutControls() {
 
   groups.forEach((g) => {
     const details = document.createElement('details');
-    details.className = 'layout-group';
+    details.className = 'settings-group';
 
     const summary = document.createElement('summary');
     summary.textContent = g.name;
@@ -416,6 +416,7 @@ function saveSettings() {
     battery:     document.getElementById('battery-level-select').value,
     direction:  document.getElementById('tap-direction').value,
     unit:       document.getElementById('tap-unit').value,
+    startDelay: document.getElementById('start-delay').value,
     speed:      document.getElementById('anim-speed').value,
     trigger:    document.getElementById('trigger-type').value,
   };
@@ -463,6 +464,9 @@ function loadSettings() {
   if (s.battery)     document.getElementById('battery-level-select').value = s.battery;
   if (s.direction)  document.getElementById('tap-direction').value    = s.direction;
   if (s.unit)       document.getElementById('tap-unit').value         = s.unit;
+  // '0' is a real choice here and is truthy as a string, but test for presence
+  // anyway so the intent survives if these ever become numbers.
+  if (s.startDelay !== undefined) document.getElementById('start-delay').value = s.startDelay;
   if (s.speed)      document.getElementById('anim-speed').value       = s.speed;
   if (s.trigger)    document.getElementById('trigger-type').value     = s.trigger;
 }
@@ -634,8 +638,13 @@ function applyClockColor() {
   const c = parseColor(color) || { r: 255, g: 255, b: 255 };
 
   el.classList.toggle('clock-glass', glass);
-  document.documentElement.style.setProperty('--clock-rgb', c.r + ', ' + c.g + ', ' + c.b);
-  el.style.color = glass ? 'transparent' : color;
+  // Both go to the root as tokens. Nothing is written to element.style.color:
+  // an inline colour would outrank the @supports-guarded transparent fill in
+  // style.css, defeating the guard that keeps an unsupported browser showing a
+  // solid clock rather than no clock at all.
+  const root = document.documentElement.style;
+  root.setProperty('--clock-color', color);
+  root.setProperty('--clock-rgb', c.r + ', ' + c.g + ', ' + c.b);
 }
 
 function applyStatusTime() {
@@ -1175,13 +1184,27 @@ document.addEventListener('DOMContentLoaded', () => {
    * touchend and mouseup can both fire for one touch; the second call is a
    * no-op because targetShowing is already false.
    */
+  /*
+   * Read at the moment of the tap rather than cached at startup, so changing
+   * the setting takes effect on the very next tap without a reload — which
+   * matters when it is being adjusted between run-throughs.
+   *
+   * 0 is a legitimate value ("Instant"), so this tests the parse rather than
+   * the truthiness, and falls back to the old fixed 3s if anything is wrong.
+   */
+  const startDelayMs = () => {
+    const sel = document.getElementById('start-delay');
+    const ms = sel ? parseInt(sel.value, 10) : NaN;
+    return isNaN(ms) ? 3000 : ms;
+  };
+
   const scheduleCountback = () => {
     if (!targetShowing) return;
     targetShowing = false;
     rollbackTimer = setTimeout(() => {
       rollbackTimer = null;
       rollBackToIST();
-    }, 3000);
+    }, startDelayMs());
   };
   document.getElementById('screen-home')
     .addEventListener('mouseup', scheduleCountback);
@@ -1238,6 +1261,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tap-direction')
     .addEventListener('change', saveSettings);
   document.getElementById('tap-unit')
+    .addEventListener('change', saveSettings);
+  // Nothing to apply — startDelayMs() reads the select when the tap happens.
+  document.getElementById('start-delay')
     .addEventListener('change', saveSettings);
   document.getElementById('anim-speed')
     .addEventListener('change', saveSettings);

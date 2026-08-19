@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Clock</title>
-  <link rel="stylesheet" href="style.css?v=31">
+  <link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 
@@ -124,27 +124,26 @@
         circle turns white.
       -->
       <div id="torch-btn">
-        <svg width="19" height="29" viewBox="0 0 22 34" aria-hidden="true">
-          <path id="torch-glyph" fill="#fff" fill-rule="evenodd" d="
-            M3.6 1.2 H18.4 Q20.1 1.2 19.6 2.9 L17.9 9.0
-            Q17.6 10.2 16.4 10.2 H5.6 Q4.4 10.2 4.1 9.0 L2.4 2.9
-            Q1.9 1.2 3.6 1.2 Z
-            M8.3 11.5 H13.7 Q16.4 11.5 16.4 14.2 V30.1
-            Q16.4 32.8 13.7 32.8 H8.3 Q5.6 32.8 5.6 30.1 V14.2
-            Q5.6 11.5 8.3 11.5 Z
-            M9.7 15.6 H12.3 Q13.3 15.6 13.3 16.6 V17.4
-            Q13.3 18.4 12.3 18.4 H9.7 Q8.7 18.4 8.7 17.4 V16.6
-            Q8.7 15.6 9.7 15.6 Z" />
+        <!--
+          flashlight.off.fill, the genuine Apple outline rather than a
+          freehand copy. The export is drawn flipped (scale(1,-1)); every y has
+          been baked to H-y and the path shifted so the viewBox is the glyph
+          itself with no padding, because style.css sizes these as ratios of
+          the button and interior padding would render the icon small.
+
+          fill-rule is nonzero, as Apple authored it — the switch cut-out is a
+          genuine hole, so it still inverts for free when the torch lights.
+        -->
+        <svg viewBox="0 0 26.9 65.05" aria-hidden="true">
+          <path id="torch-glyph" fill="#fff" fill-rule="nonzero"
+            d="M 0 6.34 L 0 5.35 Q 0 0 5.22 0 L 21.68 0 Q 26.9 0 26.9 5.35 L 26.9 6.34 Z M 10.87 65.05 Q 8.34 65.05 7 63.68 Q 5.67 62.3 5.67 59.68 L 5.67 27.91 Q 5.67 25.61 5.18 23.97 Q 4.68 22.32 3.87 21.05 L 2.26 18.56 Q 1.25 16.97 0.62 15.48 Q 0 13.99 0 12.14 L 0 9.32 L 26.9 9.32 L 26.9 12.14 Q 26.9 13.99 26.26 15.48 Q 25.63 16.97 24.62 18.56 L 23.03 21.05 Q 22.21 22.32 21.72 23.97 Q 21.23 25.61 21.23 27.91 L 21.23 59.68 Q 21.23 62.3 19.88 63.68 Q 18.54 65.05 16.03 65.05 Z M 8.64 30.42 L 8.64 38.59 Q 8.64 40.61 10.03 41.99 Q 11.43 43.38 13.47 43.38 Q 14.82 43.38 15.91 42.74 Q 16.99 42.11 17.63 41.02 Q 18.26 39.94 18.26 38.59 L 18.26 30.42 Q 18.26 29.07 17.63 27.98 Q 16.99 26.9 15.91 26.25 Q 14.82 25.61 13.47 25.61 Q 11.43 25.61 10.03 27.01 Q 8.64 28.4 8.64 30.42 Z M 13.47 41.68 Q 12.14 41.68 11.25 40.8 Q 10.36 39.92 10.36 38.59 Q 10.36 37.32 11.26 36.42 Q 12.16 35.51 13.47 35.51 Q 14.74 35.51 15.65 36.42 Q 16.56 37.32 16.56 38.59 Q 16.56 39.92 15.68 40.8 Q 14.8 41.68 13.47 41.68 Z" />
         </svg>
       </div>
       <div id="camera-btn">
-        <svg width="26" height="21" viewBox="0 0 28 22" aria-hidden="true">
-          <path id="camera-glyph" fill="#fff" fill-rule="evenodd" d="
-            M4.4 4.4 H9.0 L10.2 1.9 Q10.7 0.6 12.1 0.6 H15.9
-            Q17.3 0.6 17.8 1.9 L19.0 4.4 H23.6 Q27.4 4.4 27.4 8.2
-            V17.6 Q27.4 21.4 23.6 21.4 H4.4 Q0.6 21.4 0.6 17.6
-            V8.2 Q0.6 4.4 4.4 4.4 Z
-            M14 8.3 A4.6 4.6 0 1 0 14 17.5 A4.6 4.6 0 1 0 14 8.3 Z" />
+        <!-- camera.fill, same treatment. The lens is a real hole. -->
+        <svg viewBox="0 0 67.35 52.27" aria-hidden="true">
+          <path id="camera-glyph" fill="#fff" fill-rule="nonzero"
+            d="M 56.78 20.69 Q 58.18 20.69 59.17 19.7 Q 60.16 18.71 60.16 17.32 Q 60.16 15.94 59.17 14.95 Q 58.18 13.96 56.78 13.96 Q 55.41 13.96 54.42 14.95 Q 53.43 15.94 53.43 17.32 Q 53.43 18.71 54.42 19.7 Q 55.41 20.69 56.78 20.69 Z M 8.36 52.27 Q 4.21 52.27 2.11 50.19 Q 0 48.1 0 44 L 0 14.91 Q 0 10.81 2.11 8.72 Q 4.21 6.64 8.36 6.64 L 16.09 6.64 Q 17.19 6.64 17.86 6.49 Q 18.54 6.34 19.08 5.94 Q 19.62 5.54 20.24 4.83 L 22.52 2.28 Q 23.22 1.5 23.98 1 Q 24.73 0.49 25.7 0.25 Q 26.66 0 28.06 0 L 38.97 0 Q 40.37 0 41.35 0.25 Q 42.32 0.49 43.07 1 Q 43.81 1.5 44.52 2.28 L 46.79 4.83 Q 47.44 5.56 47.96 5.95 Q 48.49 6.34 49.17 6.49 Q 49.84 6.64 50.94 6.64 L 59 6.64 Q 63.14 6.64 65.25 8.72 Q 67.35 10.81 67.35 14.91 L 67.35 44 Q 67.35 48.1 65.25 50.19 Q 63.14 52.27 59 52.27 Z M 33.69 44.41 Q 36.85 44.41 39.6 43.24 Q 42.35 42.07 44.43 39.98 Q 46.51 37.9 47.7 35.13 Q 48.88 32.36 48.88 29.2 Q 48.88 26.02 47.71 23.26 Q 46.54 20.5 44.45 18.4 Q 42.37 16.31 39.61 15.14 Q 36.85 13.96 33.69 13.96 Q 30.53 13.96 27.77 15.14 Q 25.01 16.31 22.92 18.4 Q 20.84 20.5 19.67 23.26 Q 18.5 26.02 18.5 29.2 Q 18.5 32.36 19.67 35.13 Q 20.84 37.9 22.92 39.98 Q 25.01 42.07 27.77 43.24 Q 30.53 44.41 33.69 44.41 Z M 33.69 40.78 Q 31.28 40.78 29.19 39.89 Q 27.09 38.99 25.5 37.4 Q 23.91 35.81 23.01 33.71 Q 22.11 31.6 22.11 29.2 Q 22.11 26.77 23.01 24.67 Q 23.91 22.58 25.5 20.98 Q 27.09 19.38 29.19 18.49 Q 31.28 17.6 33.69 17.6 Q 36.07 17.6 38.18 18.49 Q 40.28 19.38 41.87 20.98 Q 43.46 22.58 44.35 24.67 Q 45.25 26.77 45.25 29.2 Q 45.25 31.6 44.35 33.71 Q 43.46 35.81 41.87 37.4 Q 40.28 38.99 38.18 39.89 Q 36.07 40.78 33.69 40.78 Z" />
         </svg>
       </div>
     </div>
@@ -164,20 +163,31 @@
 
       <div class="secret-title">⚙ Settings</div>
 
+      <!--
+        APPEARANCE — how the lock screen looks.
+        Grouped by the element each setting affects, and deliberately using the
+        same four names as the Layout section below (Clock, Buttons, Status
+        Bar, Home Bar) so there is one taxonomy to learn rather than two.
+        Everything starts collapsed: this panel is opened mid-performance, and
+        a wall of rows to scroll is the last thing wanted then.
+      -->
       <div class="settings-section">
-        <div class="section-title">Display Settings</div>
+        <div class="section-title">Appearance</div>
+
+      <details class="settings-group">
+        <summary>Wallpaper</summary>
         <div class="secret-row">
           <label>Wallpaper</label>
           <select id="wallpaper-select">
-            <option value="ios">iOS Default</option>
-            <option value="gradient1">Deep Purple</option>
-            <option value="gradient2">Midnight Blue</option>
-            <option value="gradient3">Dark Green</option>
-            <option value="gradient4">Deep Red</option>
-            <option value="gradient5">Pure Black</option>
-            <option value="gradient6">Ocean Blue</option>
-            <option value="gradient7">Sunset</option>
-            <option value="custom">Custom Photo</option>
+          <option value="ios">iOS Default</option>
+          <option value="gradient1">Deep Purple</option>
+          <option value="gradient2">Midnight Blue</option>
+          <option value="gradient3">Dark Green</option>
+          <option value="gradient4">Deep Red</option>
+          <option value="gradient5">Pure Black</option>
+          <option value="gradient6">Ocean Blue</option>
+          <option value="gradient7">Sunset</option>
+          <option value="custom">Custom Photo</option>
           </select>
         </div>
         <div class="secret-row" id="gallery-row" style="display:none">
@@ -186,158 +196,176 @@
             accept="image/*"/>
           <button id="gallery-btn">Open Gallery</button>
         </div>
+      </details>
+
+      <details class="settings-group">
+        <summary>Clock</summary>
+        <div class="secret-row">
+          <label>Style</label>
+          <select id="clock-style">
+          <option value="glass" selected>Glass</option>
+          <option value="solid">Solid</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Colour</label>
+          <select id="clock-color">
+          <option value="#ffffff">White</option>
+          <option value="#f59e0b">Gold</option>
+          <option value="#22c55e">Green</option>
+          <option value="#8b5cf6">Purple</option>
+          <option value="#38bdf8">Blue</option>
+          <option value="#f472b6">Pink</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Date Format</label>
+          <select id="date-format">
+          <option value="short" selected>Tue Apr 1</option>
+          <option value="full">Tuesday, April 1</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Align</label>
+          <select id="clock-align">
+          <option value="center" selected>Center</option>
+          <option value="flex-start">Left</option>
+          <option value="flex-end">Right</option>
+          </select>
+        </div>
+      </details>
+
+      <details class="settings-group">
+        <summary>Buttons</summary>
+        <!-- Liquid Glass shapes both circles; the other two are the lit torch. -->
         <div class="secret-row">
           <label>Liquid Glass</label>
-          <!-- Mirrors Settings > Display & Brightness > Liquid Glass on iOS 26.
-               Set this to whatever the phone running the prop is set to. -->
           <select id="glass-mode">
-            <option value="clear" selected>Clear</option>
-            <option value="tinted">Tinted</option>
+          <option value="clear" selected>Clear</option>
+          <option value="tinted">Tinted</option>
           </select>
         </div>
         <div class="secret-row">
           <label>Torch Lit</label>
-          <!-- What the disc becomes with the torch on. Blue is the iOS 26
-               default: an active control takes the system accent colour. -->
           <select id="torch-lit">
-            <option value="blue" selected>Blue (accent)</option>
-            <option value="white">White</option>
-            <option value="wallpaper">Wallpaper tint</option>
+          <option value="blue" selected>Blue (accent)</option>
+          <option value="white">White</option>
+          <option value="wallpaper">Wallpaper tint</option>
           </select>
         </div>
         <div class="secret-row">
           <label>Torch Glyph</label>
-          <!-- Auto contrasts against whatever the disc is: white on a blue or
-               wallpaper-tinted disc, dark on a white one. -->
           <select id="torch-glyph-mode">
-            <option value="auto" selected>Auto</option>
-            <option value="white">White</option>
-            <option value="dark">Dark</option>
+          <option value="auto" selected>Auto</option>
+          <option value="white">White</option>
+          <option value="dark">Dark</option>
           </select>
         </div>
+      </details>
+
+      <details class="settings-group">
+        <summary>Status Bar</summary>
+        <!-- Both halves default to Hidden: iOS paints its own bar over this
+             area, and the two would double up. -->
         <div class="secret-row">
-          <label>Status Bar Time</label>
-          <!-- Defaults to Hidden: iOS draws its own status bar clock over
-               ours, so showing both gives doubled text. -->
+          <label>Time</label>
           <select id="statusbar-time">
-            <option value="hide" selected>Hidden</option>
-            <option value="show">Match big clock</option>
+          <option value="hide" selected>Hidden</option>
+          <option value="show">Match big clock</option>
           </select>
         </div>
         <div class="secret-row">
-          <label>Status Bar Icons</label>
-          <!-- Signal, wifi and battery. Same reasoning as the time above:
-               only turn on when the real iOS bar is hidden. -->
+          <label>Icons</label>
           <select id="statusbar-icons">
-            <option value="hide" selected>Hidden</option>
-            <option value="show">Show</option>
-          </select>
-        </div>
-        <div class="secret-row">
-          <label>Home Indicator</label>
-          <!-- The bottom pill. Same reasoning as the status bar above: only
-               turn it on where the real iOS one is not being drawn. -->
-          <select id="home-indicator-toggle">
-            <option value="hide" selected>Hidden</option>
-            <option value="show">Show</option>
+          <option value="hide" selected>Hidden</option>
+          <option value="show">Show</option>
           </select>
         </div>
         <div class="secret-row">
           <label>Battery Level</label>
           <select id="battery-level-select">
-            <option value="100">100%</option>
-            <option value="80" selected>80%</option>
-            <option value="60">60%</option>
-            <option value="40">40%</option>
-            <option value="25">25%</option>
-            <option value="10">10%</option>
+          <option value="100">100%</option>
+          <option value="80" selected>80%</option>
+          <option value="60">60%</option>
+          <option value="40">40%</option>
+          <option value="25">25%</option>
+          <option value="10">10%</option>
           </select>
         </div>
+      </details>
+
+      <details class="settings-group">
+        <summary>Home Bar</summary>
         <div class="secret-row">
-          <label>Clock Color</label>
-          <select id="clock-color">
-            <option value="#ffffff">White</option>
-            <option value="#f59e0b">Gold</option>
-            <option value="#22c55e">Green</option>
-            <option value="#8b5cf6">Purple</option>
-            <option value="#38bdf8">Blue</option>
-            <option value="#f472b6">Pink</option>
+          <label>Home Indicator</label>
+          <select id="home-indicator-toggle">
+          <option value="hide" selected>Hidden</option>
+          <option value="show">Show</option>
           </select>
         </div>
-        <div class="secret-row">
-          <label>Clock Style</label>
-          <!-- Glass is the iOS 26 lock screen treatment: the numerals are
-               translucent and the wallpaper reads through them. -->
-          <select id="clock-style">
-            <option value="glass" selected>Glass</option>
-            <option value="solid">Solid</option>
-          </select>
-        </div>
-        <div class="secret-row">
-          <label>Date Format</label>
-          <!-- iOS 26 abbreviates on the lock screen: "Tue Apr 1". -->
-          <select id="date-format">
-            <option value="short" selected>Tue Apr 1</option>
-            <option value="full">Tuesday, April 1</option>
-          </select>
-        </div>
+      </details>
       </div>
 
+      <!--
+        LAYOUT — where things sit and how big they are, every value a
+        percentage of the screen. Its groups are generated from LAYOUT_CONFIG.
+      -->
       <div class="settings-section">
         <div class="section-title">Layout &mdash; % of screen</div>
-        <!--
-          Every slider below is generated from LAYOUT_CONFIG in script.js, and
-          every value is a PERCENTAGE of the screen rather than a pixel count.
-          That is what lets one set of numbers look right on an iPhone SE and a
-          16 Pro Max alike, instead of needing a measured row per model.
-
-          To add a tunable, add one line to LAYOUT_CONFIG. Its slider, its CSS
-          variable and its persistence all appear on their own; nothing in this
-          file needs touching.
-        -->
         <div id="layout-info">viewport &mdash;</div>
         <div id="layout-rows"></div>
-        <!-- Alignment is a choice, not a magnitude, so it stays a select. -->
-        <div class="secret-row">
-          <label>Clock Align</label>
-          <select id="clock-align">
-            <option value="center" selected>Center</option>
-            <option value="flex-start">Left</option>
-            <option value="flex-end">Right</option>
-          </select>
-        </div>
         <button id="reset-layout-btn">Reset to iOS proportions</button>
       </div>
 
+      <!--
+        PERFORMANCE — the trick itself: which way the time moves on the
+        passcode digit, and how the countback runs. Four rows, left flat.
+      -->
       <div class="settings-section">
-        <div class="section-title">Performance Settings</div>
+        <div class="section-title">Performance</div>
         <div class="secret-row">
           <label>Time Direction</label>
           <select id="tap-direction">
-            <option value="backward">Backward</option>
-            <option value="forward">Forward</option>
+          <option value="backward">Backward</option>
+          <option value="forward">Forward</option>
           </select>
         </div>
         <div class="secret-row">
           <label>Unit</label>
           <select id="tap-unit">
-            <option value="minutes">Minutes</option>
-            <option value="hours">Hours</option>
+          <option value="minutes">Minutes</option>
+          <option value="hours">Hours</option>
+          </select>
+        </div>
+        <div class="secret-row">
+          <label>Start Delay</label>
+          <!-- The beat between the spectator's tap and the countback starting.
+               Long enough to look away and hand the phone over; short enough
+               that nobody wonders whether anything is happening. -->
+          <select id="start-delay">
+            <option value="0">Instant</option>
+            <option value="1000">1 second</option>
+            <option value="2000">2 seconds</option>
+            <option value="3000" selected>3 seconds</option>
+            <option value="4000">4 seconds</option>
+            <option value="5000">5 seconds</option>
+            <option value="8000">8 seconds</option>
+            <option value="10000">10 seconds</option>
           </select>
         </div>
         <div class="secret-row">
           <label>Roll Speed</label>
           <select id="anim-speed">
-            <option value="slow">Slow</option>
-            <option value="medium" selected>Medium</option>
-            <option value="fast">Fast</option>
+          <option value="slow">Slow</option>
+          <option value="medium" selected>Medium</option>
+          <option value="fast">Fast</option>
           </select>
         </div>
         <div class="secret-row">
           <label>Trigger</label>
           <select id="trigger-type">
-            <option value="tap">Tap</option>
-            <option value="tap-vibrate">Tap + Vibrate</option>
+          <option value="tap">Tap</option>
+          <option value="tap-vibrate">Tap + Vibrate</option>
           </select>
         </div>
       </div>
@@ -348,7 +376,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=31"></script>
+  <script src="script.js?v=37"></script>
   <script>
     /*
      * Registers the precaching worker. Only runs in a secure context — over

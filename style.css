@@ -70,6 +70,7 @@
   --home-h:            5px;      /* home indicator thickness       (% of height) */
   --home-gap:          8px;      /* above the very bottom edge     (% of height) */
   --home-opacity:      1;        /* home indicator alpha */
+  --clock-color:       #ffffff;        /* Clock Color, as written */
   --clock-rgb:         255, 255, 255;  /* Clock Color, as channels for rgba() */
   --clock-glass-fill:  0.38;     /* glass clock body alpha */
   --clock-glass-edge:  0.006em;  /* glass clock rim, in the clock's own em */
@@ -440,7 +441,7 @@ body {
   font-size: var(--time-size);
   font-weight: var(--clock-weight);
   opacity: var(--clock-opacity);
-  color: #ffffff;
+  color: var(--clock-color, #ffffff);
   /* Tracking is expressed in the clock's OWN em, so it scales with the type
      automatically: -0.0333em is the -3px the 90px reference size used. */
   letter-spacing: var(--clock-tracking);
@@ -662,17 +663,70 @@ body {
  * here in CSS instead of being rebuilt in JS on every drag.
  */
 #clock-time.clock-glass {
+  /*
+   * A smooth, MONOTONIC top-to-bottom fade.
+   *
+   * The previous gradient ran bright -> dark -> bright across three stops, and
+   * that dip in the middle showed up as a hard horizontal band straight across
+   * the numerals. Glass does not band; it falls off evenly. Two stops, one
+   * direction, and a gentle 1.25 -> 0.9 range so the falloff is felt rather
+   * than seen.
+   */
   background-image: linear-gradient(
-    155deg,
-    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 2.15)) 0%,
-    rgba(var(--clock-rgb), var(--clock-glass-fill))              45%,
-    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 1.75)) 100%
+    180deg,
+    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 1.25)) 0%,
+    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 0.90)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
+
+  /*
+   * The rim is BRIGHTER than the body it surrounds — that contrast is what
+   * reads as an edge catching the light. Keep it thin: a heavy stroke over a
+   * dim fill just looks like outlined text.
+   */
+  /*
+   * A text stroke is CENTRED on the outline — half of it falls inside the
+   * glyph. A translucent stroke over a translucent fill therefore compounds
+   * with that fill, leaving a brighter band just within every edge. On digits
+   * with internal corners that band is rectangular, which is why 1 and 4 grew
+   * visible boxes while rounder digits looked fine.
+   *
+   * paint-order puts the stroke UNDER the fill so the inner half is covered
+   * and only the outer half shows. Support is not universal, so Glass Edge
+   * also defaults to 0 — the gradient alone is clean on every renderer, and
+   * the slider is there if a rim is wanted on a device that handles it.
+   */
+  paint-order: stroke fill;
   -webkit-text-stroke:
     var(--clock-glass-edge)
-    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 1.2));
+    rgba(var(--clock-rgb), calc(var(--clock-glass-fill) * 1.35));
+
+  /*
+   * The base rule's 0 2px 20px shadow is painted from the glyph OUTLINE, and
+   * goes on being painted when the fill is transparent. Behind translucent
+   * digits that reads as grey smoke filling the counters in — the opposite of
+   * see-through, and most of why this looked muddy rather than glassy.
+   *
+   * A tight shadow still lifts the clock off a pale wallpaper without
+   * flooding it.
+   */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+/*
+ * The transparent fill lives here, NOT on the element, and only where the clip
+ * is actually supported.
+ *
+ * It used to be written inline by JS, which meant that if background-clip:text
+ * were ever unhonoured the fill would still go transparent and the clock would
+ * vanish outright — a blank lock screen mid-performance. As a guarded
+ * stylesheet rule the worst case degrades to a solid coloured clock instead.
+ */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  #clock-time.clock-glass {
+    color: transparent;
+  }
 }
 
 #clock-time.roll-dim {
@@ -684,12 +738,15 @@ body {
    reference button, so at scale 1 this is pixel-identical to the fixed
    width/height attributes it overrides. */
 #torch-btn svg {
-  width:  calc(var(--btn-size) * 0.36538 * var(--glyph-scale));
-  height: calc(var(--btn-size) * 0.55769 * var(--glyph-scale));
+  /* Height is measured off the real lock screen; width falls out of the
+     symbol's own 0.41 aspect rather than being guessed at. The old figures
+     described a torch 1.6x too wide, which is why it never looked right. */
+  height: calc(var(--btn-size) * 0.43 * var(--glyph-scale));
+  width:  calc(var(--btn-size) * 0.17782 * var(--glyph-scale));
 }
 #camera-btn svg {
-  width:  calc(var(--btn-size) * 0.50000 * var(--glyph-scale));
-  height: calc(var(--btn-size) * 0.40385 * var(--glyph-scale));
+  width:  calc(var(--btn-size) * 0.45 * var(--glyph-scale));
+  height: calc(var(--btn-size) * 0.34884 * var(--glyph-scale));
 }
 
 /* Status bar icons, scaled from their own base sizes so each keeps its aspect
@@ -922,10 +979,10 @@ body {
 /* Groups collapse so the panel opens short. Sixteen sliders laid out flat is
    an unusable scroll on a phone; collapsed, the whole Layout section is four
    taps tall and you open only the one you are working on. */
-.layout-group {
+.settings-group {
   border-bottom: 1px solid #1a1a1a;
 }
-.layout-group summary {
+.settings-group summary {
   padding: 11px 16px;
   font-size: 14px;
   color: #ccc;
@@ -936,24 +993,24 @@ body {
   list-style: none;
   font-family: 'Inter', sans-serif;
 }
-.layout-group summary::-webkit-details-marker {
+.settings-group summary::-webkit-details-marker {
   display: none;
 }
-.layout-group summary::after {
+.settings-group summary::after {
   content: '\203a';
   color: #666;
   font-size: 18px;
   transform: rotate(90deg);
   transition: transform 0.15s ease;
 }
-.layout-group[open] summary::after {
+.settings-group[open] summary::after {
   transform: rotate(-90deg);
 }
-.layout-group[open] summary {
+.settings-group[open] summary {
   color: #8b5cf6;
 }
 /* Tighter than a normal .secret-row — these stack two deep. */
-.layout-group .layout-row {
+.settings-group .layout-row {
   padding: 6px 16px 12px;
   gap: 6px;
   border-bottom: none;
