@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Clock</title>
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -219,52 +219,23 @@
             <option value="#f472b6">Pink</option>
           </select>
         </div>
-        <div class="secret-row">
-          <label>Clock Size</label>
-          <select id="clock-size">
-            <option value="72px">Small</option>
-            <option value="88px" selected>Medium</option>
-            <option value="104px">Large</option>
-          </select>
-        </div>
       </div>
 
       <div class="settings-section">
-        <div class="section-title">Layout</div>
+        <div class="section-title">Layout &mdash; % of screen</div>
         <!--
-          Auto reads the screen size and picks the matching profile, and its
-          label is rewritten at runtime to name what was detected. The explicit
-          models are for setting the prop up on a different machine, or for
-          overriding a detection that Display Zoom has thrown off.
+          Every slider below is generated from LAYOUT_CONFIG in script.js, and
+          every value is a PERCENTAGE of the screen rather than a pixel count.
+          That is what lets one set of numbers look right on an iPhone SE and a
+          16 Pro Max alike, instead of needing a measured row per model.
+
+          To add a tunable, add one line to LAYOUT_CONFIG. Its slider, its CSS
+          variable and its persistence all appear on their own; nothing in this
+          file needs touching.
         -->
-        <div class="secret-row">
-          <label>Device</label>
-          <select id="device-select">
-            <option value="auto" selected>Auto</option>
-            <option value="320x568">iPhone SE (1st gen)</option>
-            <option value="375x667">iPhone 8 / SE</option>
-            <option value="414x736">iPhone 8 Plus</option>
-            <option value="375x812">iPhone X / 13 mini</option>
-            <option value="390x844">iPhone 12 / 13 / 14</option>
-            <option value="393x852">iPhone 15 / 16</option>
-            <option value="402x874">iPhone 16 Pro</option>
-            <option value="414x896">iPhone XR / 11</option>
-            <option value="428x926">iPhone 13 Pro Max</option>
-            <option value="430x932">iPhone 15 Pro Max</option>
-            <option value="440x956">iPhone 16 Pro Max</option>
-          </select>
-        </div>
-        <!-- Date and time move together as one group. -->
-        <div class="secret-row">
-          <label>Clock Position</label>
-          <select id="clock-offset">
-            <option value="-32">Much Higher</option>
-            <option value="-16">Higher</option>
-            <option value="0" selected>Auto</option>
-            <option value="16">Lower</option>
-            <option value="32">Much Lower</option>
-          </select>
-        </div>
+        <div id="layout-info">viewport &mdash;</div>
+        <div id="layout-rows"></div>
+        <!-- Alignment is a choice, not a magnitude, so it stays a select. -->
         <div class="secret-row">
           <label>Clock Align</label>
           <select id="clock-align">
@@ -273,16 +244,7 @@
             <option value="flex-end">Right</option>
           </select>
         </div>
-        <!-- Torch and camera move together as the other group. -->
-        <div class="secret-row">
-          <label>Buttons Position</label>
-          <select id="buttons-offset">
-            <option value="32">Much Higher</option>
-            <option value="16">Higher</option>
-            <option value="0" selected>Auto</option>
-            <option value="-8">Lower</option>
-          </select>
-        </div>
+        <button id="reset-layout-btn">Reset to iOS proportions</button>
       </div>
 
       <div class="settings-section">
@@ -324,7 +286,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=23"></script>
+  <script src="script.js?v=24"></script>
   <script>
     /*
      * Registers the precaching worker. Only runs in a secure context — over

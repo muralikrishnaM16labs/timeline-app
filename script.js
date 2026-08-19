@@ -16,86 +16,150 @@ const WP_STORAGE_KEY = 'mindtrack-custom-wallpaper';
 // code units, so staying under this leaves comfortable headroom.
 const WP_MAX_CHARS = 2000000;
 
-// ── DEVICE LAYOUT PROFILES ──
+// ── LAYOUT CONFIG ──
 /*
- * iOS does not place the lock screen clock at a fixed offset — it sits further
- * down the taller the phone is. One hard-coded position is therefore wrong on
- * every model but the one it was measured on, which is why the clock read too
- * high on the big phones.
+ * Every position and size on the lock screen is a PERCENTAGE of the screen,
+ * never a fixed pixel count.
  *
- * Keyed by the logical screen size in points, short side first, so it is the
- * device that is matched and not the browser window. statusH is the height of
- * the status bar strip, clockTop is where the date starts measured from the
- * very top of the screen, and bottomGap is the torch/camera row's clearance
- * above the home indicator.
+ * This replaced a lookup table of pixel measurements per iPhone model. That
+ * table could only ever be right for the models listed in it: a phone that was
+ * not there — a new model, an iPad, Display Zoom turned on — fell back to
+ * guesswork, and every correction had to be re-typed once per row. Percentages
+ * need no table at all. The same numbers hold their proportions on a 320-point
+ * SE and a 440-point 16 Pro Max.
+ *
+ *   axis 'h'   percentage of the viewport HEIGHT — vertical positions
+ *   axis 'w'   percentage of the viewport WIDTH  — type sizes, side insets
+ *
+ * Sizes key off width rather than height deliberately: width is what decides
+ * whether the clock still fits on one line.
+ *
+ * The defaults are the real iOS lock screen measured on a 390x844 iPhone
+ * 12/13/14 and converted, so out of the box this renders what it always did.
+ *
+ * TO ADD A TUNABLE, ADD ONE LINE HERE. The settings slider, the CSS variable,
+ * the live readout, saving and restoring are all generated from this list.
  */
-const DEVICE_PROFILES = {
-  '320x568': { name: 'iPhone SE (1st gen)',   statusH: 20, clockTop: 46,  bottomGap: 14 },
-  '375x667': { name: 'iPhone 8 / SE',         statusH: 20, clockTop: 58,  bottomGap: 16 },
-  '414x736': { name: 'iPhone 8 Plus',         statusH: 20, clockTop: 64,  bottomGap: 18 },
-  '375x812': { name: 'iPhone X / 13 mini',    statusH: 44, clockTop: 90,  bottomGap: 20 },
-  '390x844': { name: 'iPhone 12 / 13 / 14',   statusH: 47, clockTop: 94,  bottomGap: 22 },
-  '393x852': { name: 'iPhone 15 / 16',        statusH: 54, clockTop: 98,  bottomGap: 22 },
-  '402x874': { name: 'iPhone 16 Pro',         statusH: 54, clockTop: 100, bottomGap: 22 },
-  '414x896': { name: 'iPhone XR / 11',        statusH: 44, clockTop: 98,  bottomGap: 22 },
-  '428x926': { name: 'iPhone 13 Pro Max',     statusH: 47, clockTop: 104, bottomGap: 24 },
-  '430x932': { name: 'iPhone 15 Pro Max',     statusH: 54, clockTop: 106, bottomGap: 24 },
-  '440x956': { name: 'iPhone 16 Pro Max',     statusH: 54, clockTop: 110, bottomGap: 24 },
-};
+const LAYOUT_CONFIG = [
+  { key: 'statusH',   css: '--status-h',   label: 'Status Bar Height',  axis: 'h', pct:  5.57, max: 15 },
+  { key: 'clockGap',  css: '--clock-gap',  label: 'Clock Top Gap',      axis: 'h', pct:  5.57, max: 40 },
+  { key: 'clockSide', css: '--clock-side', label: 'Clock Side Inset',   axis: 'w', pct:  6.67, max: 30 },
+  { key: 'dateSize',  css: '--date-size',  label: 'Date Size',          axis: 'w', pct:  4.36, max: 10 },
+  { key: 'timeSize',  css: '--time-size',  label: 'Clock Size',         axis: 'w', pct: 23.08, max: 45 },
+  { key: 'bottomGap', css: '--bottom-gap', label: 'Buttons Bottom Gap', axis: 'h', pct:  2.61, max: 25 },
+  { key: 'btnSize',   css: '--btn-size',   label: 'Button Size',        axis: 'w', pct: 13.33, max: 30 },
+  { key: 'btnSide',   css: '--btn-side',   label: 'Buttons Side Inset', axis: 'w', pct: 10.26, max: 35 },
+];
+
+/* Live values, seeded from the defaults above and overwritten by loadSettings. */
+const layoutPct = {};
+LAYOUT_CONFIG.forEach((c) => { layoutPct[c.key] = c.pct; });
 
 /*
- * Short side first so a phone held sideways, or a desktop browser being used to
- * set the prop up, still resolves to the same profile.
+ * The basis is the VIEWPORT, not screen.width/height. With browser toolbars
+ * showing, the screen is taller than the area we actually get to paint, and
+ * measuring against it would push the buttons off the bottom edge.
  */
-function detectDeviceKey() {
-  const short = Math.min(screen.width, screen.height);
-  const long  = Math.max(screen.width, screen.height);
-  return short + 'x' + long;
+function layoutBasis(axis) {
+  const w = window.innerWidth  || screen.width;
+  const h = window.innerHeight || screen.height;
+  return axis === 'w' ? w : h;
+}
+
+/* One slider per entry, so LAYOUT_CONFIG stays the only thing to edit. */
+function buildLayoutControls() {
+  const host = document.getElementById('layout-rows');
+  if (!host || host.childElementCount) return;
+
+  LAYOUT_CONFIG.forEach((c) => {
+    const row = document.createElement('div');
+    row.className = 'secret-row layout-row';
+
+    const head = document.createElement('div');
+    head.className = 'layout-head';
+
+    const label = document.createElement('label');
+    label.textContent = c.label;
+
+    const out = document.createElement('span');
+    out.className = 'pct-out';
+    out.id = 'out-' + c.key;
+
+    head.appendChild(label);
+    head.appendChild(out);
+
+    const slider = document.createElement('input');
+    slider.type  = 'range';
+    slider.id    = 'pct-' + c.key;
+    slider.min   = '0';
+    slider.max   = String(c.max);
+    slider.step  = '0.01';
+    slider.value = String(layoutPct[c.key]);
+
+    // 'input', not 'change', so the clock moves under the finger as the slider
+    // is dragged — placing it by eye is the whole point of a slider here.
+    slider.addEventListener('input', () => {
+      layoutPct[c.key] = parseFloat(slider.value) || 0;
+      applyLayout();
+    });
+    // Writing to storage on every drag frame would be wasteful; once the finger
+    // lifts is enough.
+    slider.addEventListener('change', saveSettings);
+
+    row.appendChild(head);
+    row.appendChild(slider);
+    host.appendChild(row);
+  });
+}
+
+/* Pushes layoutPct back into the sliders after a restore or a reset. */
+function syncLayoutControls() {
+  LAYOUT_CONFIG.forEach((c) => {
+    const slider = document.getElementById('pct-' + c.key);
+    if (slider) slider.value = String(layoutPct[c.key]);
+  });
 }
 
 /*
- * An unlisted size — a new model, an iPad, Display Zoom turned on, or a desktop
- * window — is measured proportionally instead. The ratios come from the table
- * above, so a phone Apple has not shipped yet still lands close.
- */
-function deviceProfile(key) {
-  if (DEVICE_PROFILES[key]) return DEVICE_PROFILES[key];
-
-  const long   = parseInt(key.split('x')[1], 10) || 844;
-  const notch  = long >= 800;
-  return {
-    name:      'Unrecognised (' + key + ')',
-    statusH:   notch ? 50 : 20,
-    clockTop:  Math.round(long * (notch ? 0.115 : 0.087)),
-    bottomGap: notch ? 22 : 16,
-  };
-}
-
-/*
- * Positions both groups: the clock (date + time) and the button row. The device
- * profile supplies the baseline and the two Layout settings nudge it, so a
- * correction for one phone never has to be re-typed for another.
+ * The single place percentages become pixels. Re-runs on resize and rotation,
+ * so the proportions survive the phone being turned.
  */
 function applyLayout() {
-  const choice = document.getElementById('device-select').value;
-  const key    = choice === 'auto' ? detectDeviceKey() : choice;
-  const p      = deviceProfile(key);
-
-  const clockNudge = parseInt(document.getElementById('clock-offset').value, 10) || 0;
-  const btnNudge   = parseInt(document.getElementById('buttons-offset').value, 10) || 0;
-
   const root = document.documentElement.style;
-  root.setProperty('--status-h',   p.statusH + 'px');
-  // The gap is measured from the bottom of the status bar, so the strip's own
-  // height comes off the profile's absolute figure.
-  root.setProperty('--clock-gap',  Math.max(0, p.clockTop - p.statusH + clockNudge) + 'px');
-  root.setProperty('--bottom-gap', Math.max(0, p.bottomGap + btnNudge) + 'px');
-  root.setProperty('--clock-align', document.getElementById('clock-align').value);
 
-  // Name what was detected on the Auto option itself — otherwise there is no
-  // way to tell a correct detection from a fallback.
-  const auto = document.querySelector('#device-select option[value="auto"]');
-  if (auto) auto.textContent = 'Auto — ' + deviceProfile(detectDeviceKey()).name;
+  LAYOUT_CONFIG.forEach((c) => {
+    const px = layoutBasis(c.axis) * layoutPct[c.key] / 100;
+    root.setProperty(c.css, px.toFixed(2) + 'px');
+
+    // Show the percentage and what it currently resolves to, so a figure can be
+    // read off one phone and typed into another.
+    const out = document.getElementById('out-' + c.key);
+    if (out) {
+      out.textContent = layoutPct[c.key].toFixed(2) + '% ';
+      const px_ = document.createElement('span');
+      px_.className = 'px';
+      px_.textContent = '(' + Math.round(px) + 'px)';
+      out.appendChild(px_);
+    }
+  });
+
+  const align = document.getElementById('clock-align');
+  if (align) root.setProperty('--clock-align', align.value);
+
+  const info = document.getElementById('layout-info');
+  if (info) {
+    info.textContent =
+      'viewport ' + Math.round(layoutBasis('w')) + '×' + Math.round(layoutBasis('h')) +
+      '   device ' + screen.width + '×' + screen.height;
+  }
+}
+
+/* Back to the measured iOS proportions, discarding any hand-tuning. */
+function resetLayout() {
+  LAYOUT_CONFIG.forEach((c) => { layoutPct[c.key] = c.pct; });
+  syncLayoutControls();
+  applyLayout();
+  saveSettings();
 }
 
 // ── SAFE-AREA CANVAS COLOUR ──
@@ -256,11 +320,10 @@ function saveSettings() {
   const settings = {
     wallpaper:  document.getElementById('wallpaper-select').value,
     clockColor: document.getElementById('clock-color').value,
-    clockSize:  document.getElementById('clock-size').value,
-    device:      document.getElementById('device-select').value,
-    clockOffset: document.getElementById('clock-offset').value,
-    clockAlign:  document.getElementById('clock-align').value,
-    btnOffset:   document.getElementById('buttons-offset').value,
+    // One object holding every percentage, so adding a tunable needs no change
+    // here at all.
+    layout:     Object.assign({}, layoutPct),
+    clockAlign: document.getElementById('clock-align').value,
     statusTime:  document.getElementById('statusbar-time').value,
     statusIcons: document.getElementById('statusbar-icons').value,
     battery:     document.getElementById('battery-level-select').value,
@@ -291,13 +354,18 @@ function loadSettings() {
   }
   if (s.wallpaper)  document.getElementById('wallpaper-select').value = s.wallpaper;
   if (s.clockColor) document.getElementById('clock-color').value      = s.clockColor;
-  if (s.clockSize)  document.getElementById('clock-size').value       = s.clockSize;
-  if (s.device)      document.getElementById('device-select').value   = s.device;
-  // These two are '0' by default, which is falsy as a string only if empty —
-  // so test for presence rather than truthiness or Auto would never restore.
-  if (s.clockOffset !== undefined) document.getElementById('clock-offset').value   = s.clockOffset;
-  if (s.btnOffset   !== undefined) document.getElementById('buttons-offset').value = s.btnOffset;
-  if (s.clockAlign)  document.getElementById('clock-align').value      = s.clockAlign;  if (s.statusTime)  document.getElementById('statusbar-time').value       = s.statusTime;
+  // Only keys still listed in LAYOUT_CONFIG are taken, so a value saved by an
+  // older build for a tunable that no longer exists is ignored rather than
+  // resurrecting a dead CSS variable. A 0 is a legitimate setting, so this
+  // tests the parse and not the truthiness.
+  if (s.layout) {
+    LAYOUT_CONFIG.forEach((c) => {
+      const v = parseFloat(s.layout[c.key]);
+      if (!isNaN(v)) layoutPct[c.key] = v;
+    });
+  }
+  if (s.clockAlign)  document.getElementById('clock-align').value          = s.clockAlign;
+  if (s.statusTime)  document.getElementById('statusbar-time').value       = s.statusTime;
   if (s.statusIcons) document.getElementById('statusbar-icons').value      = s.statusIcons;
   if (s.battery)     document.getElementById('battery-level-select').value = s.battery;
   if (s.direction)  document.getElementById('tap-direction').value    = s.direction;
@@ -380,11 +448,6 @@ function applyClockColor() {
   document.getElementById('clock-time').style.color = color;
 }
 
-function applyClockSize() {
-  const size = document.getElementById('clock-size').value;
-  document.getElementById('clock-time').style.fontSize = size;
-}
-
 function applyStatusTime() {
   const show = document.getElementById('statusbar-time').value === 'show';
   document.getElementById('status-time').classList.toggle('hidden', !show);
@@ -412,7 +475,6 @@ function applyAllSettings() {
   applyLayout();
   applyWallpaper();
   applyClockColor();
-  applyClockSize();
   applyStatusTime();
   applyStatusIcons();
   applyBatteryLevel();
@@ -830,7 +892,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setTimeout(() => setPinDim(true), 1000);
 
+  // Built first so loadSettings has sliders to populate, synced after so the
+  // restored percentages actually show on them.
+  buildLayoutControls();
   loadSettings();
+  syncLayoutControls();
   // applyWallpaper() already restores a saved custom photo, so the separate
   // restore block that used to live here was redundant duplication.
   applyAllSettings();
@@ -930,11 +996,11 @@ document.addEventListener('DOMContentLoaded', () => {
     .addEventListener('change', () => { applyWallpaper(); saveSettings(); });
   document.getElementById('clock-color')
     .addEventListener('change', () => { applyClockColor(); saveSettings(); });
-  document.getElementById('clock-size')
-    .addEventListener('change', () => { applyClockSize(); saveSettings(); });
-  ['device-select', 'clock-offset', 'clock-align', 'buttons-offset']
-    .forEach((id) => document.getElementById(id)
-      .addEventListener('change', () => { applyLayout(); saveSettings(); }));
+  // The percentage sliders wire themselves up inside buildLayoutControls().
+  document.getElementById('clock-align')
+    .addEventListener('change', () => { applyLayout(); saveSettings(); });
+  document.getElementById('reset-layout-btn')
+    .addEventListener('click', resetLayout);
   document.getElementById('statusbar-time')
     .addEventListener('change', () => { applyStatusTime(); saveSettings(); });
   document.getElementById('statusbar-icons')
