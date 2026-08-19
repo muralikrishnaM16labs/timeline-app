@@ -54,7 +54,7 @@ const LAYOUT_CONFIG = [
   { key: 'clockSide',     css: '--clock-side',        label: 'Side Inset',      group: 'Clock',      axis: 'w',     pct:  6.67, max: 30 },
   { key: 'dateSize',      css: '--date-size',         label: 'Date Size',       group: 'Clock',      axis: 'w',     pct:  4.36, max: 10 },
   { key: 'dateGap',       css: '--date-gap',          label: 'Date → Clock',    group: 'Clock',      axis: 'h',     pct:  0.36, max:  6 },
-  { key: 'timeSize',      css: '--time-size',         label: 'Clock Size',      group: 'Clock',      axis: 'w',     pct: 32,    max: 36 },
+  { key: 'timeSize',      css: '--time-size',         label: 'Clock Size',      group: 'Clock',      axis: 'w',     pct: 32,    max: 60 },
   { key: 'clockWeight',   css: '--clock-weight',      label: 'Clock Weight',    group: 'Clock',      axis: 'raw',   pct: 600,   min: 100, max: 900, step: 50 },
   { key: 'clockTracking', css: '--clock-tracking',    label: 'Tracking',        group: 'Clock',      axis: 'em',    pct: -3.33, min: -8,  max: 3 },
   { key: 'clockOpacity',  css: '--clock-opacity',     label: 'Clock Opacity',   group: 'Clock',      axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
@@ -224,11 +224,98 @@ function applyLayout() {
   const align = document.getElementById('clock-align');
   if (align) root.setProperty('--clock-align', align.value);
 
+  // After every var is written, never before: the probe reads the clock's
+  // computed size, which is exactly what applyLayout has just been setting.
+  fitClock();
+
   const info = document.getElementById('layout-info');
   if (info) {
     info.textContent =
       'viewport ' + Math.round(layoutBasis('w')) + '\u00d7' + Math.round(layoutBasis('h')) +
       '   device ' + screen.width + '\u00d7' + screen.height;
+  }
+}
+
+/*
+ * ── THE CLOCK FIT GUARD ──
+ *
+ * Clock Size used to be capped at a hand-calculated 36%, a figure derived from
+ * one particular font's digit widths. That number was only ever true for that
+ * font — and now that the webfont has been dropped in favour of whatever the
+ * device provides, calculating it at all is the wrong approach.
+ *
+ * So the app measures rather than assumes: render the widest time the clock can
+ * ever display and ask the browser how wide it came out. Tabular numerals mean
+ * every digit shares one advance, and five characters is the maximum the clock
+ * shows (10:00 through 12:59), so '88:88' is a true worst case rather than a
+ * representative sample.
+ *
+ * This matters because overflow would never show up during setup at 9:41. It
+ * would show up somewhere between 10:00 and 12:59, mid-performance.
+ */
+
+/* Pure, so the arithmetic can be tested without a layout engine. Returns the
+   factor the clock must shrink by; 1 means it already fits. */
+function clockFitScale(widest, avail) {
+  if (!(widest > 0) || !(avail > 0)) return 1;
+  return widest <= avail ? 1 : avail / widest;
+}
+
+/* An off-screen twin of the clock carrying its exact typography. Kept between
+   calls rather than rebuilt, since this runs on every resize and rotation. */
+let clockProbe = null;
+function widestClockWidth() {
+  const el = document.getElementById('clock-time');
+  if (!el || !document.body || typeof window.getComputedStyle !== 'function') return 0;
+
+  if (!clockProbe) {
+    clockProbe = document.createElement('div');
+    clockProbe.setAttribute('aria-hidden', 'true');
+    clockProbe.style.cssText =
+      'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;pointer-events:none;';
+    document.body.appendChild(clockProbe);
+  }
+
+  const cs = window.getComputedStyle(el);
+  clockProbe.style.fontFamily        = cs.fontFamily;
+  clockProbe.style.fontSize          = cs.fontSize;
+  clockProbe.style.fontWeight        = cs.fontWeight;
+  clockProbe.style.letterSpacing     = cs.letterSpacing;
+  clockProbe.style.fontVariantNumeric = cs.fontVariantNumeric;
+  clockProbe.textContent = '88:88';
+  return clockProbe.getBoundingClientRect().width;
+}
+
+/*
+ * Shrinks --time-size if the worst-case time would spill past the side insets.
+ * A no-op wherever there is nothing to measure — before first paint, or under a
+ * DOM implementation with no layout engine — so it can never leave the clock
+ * smaller than the setting asked for.
+ */
+function fitClock() {
+  const wrap = document.getElementById('clock-wrap');
+  if (!wrap || typeof window.getComputedStyle !== 'function') return;
+
+  const cs = window.getComputedStyle(wrap);
+  const avail = wrap.clientWidth -
+    (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const scale = clockFitScale(widestClockWidth(), avail);
+  if (scale >= 1) return;
+
+  const root = document.documentElement.style;
+  const current = parseFloat(root.getPropertyValue('--time-size'));
+  if (!(current > 0)) return;
+
+  const capped = current * scale;
+  root.setProperty('--time-size', capped.toFixed(2) + 'px');
+
+  // Say so, rather than silently disagreeing with the slider.
+  const out = document.getElementById('out-timeSize');
+  if (out) {
+    const note = document.createElement('span');
+    note.className = 'px';
+    note.textContent = ' → ' + Math.round(capped) + 'px to fit';
+    out.appendChild(note);
   }
 }
 
