@@ -881,6 +881,102 @@ function applyBatteryLevel() {
   rect.setAttribute('fill', pct <= 20 ? '#ff3b30' : '#ffffff');
 }
 
+/*
+ * BACKUP
+ *
+ * localStorage is scoped to one browser and one install, so a layout tuned in
+ * the installed app is invisible to a kiosk browser on the same phone, and to
+ * a second phone entirely. Rather than tune it twice, the whole configuration
+ * travels as one line of text.
+ *
+ * Export is literally what is already in storage, and import writes the text
+ * back and lets loadSettings() read it. That is the point: loadSettings
+ * already skips unknown keys, rejects unparseable numbers and survives corrupt
+ * input, so import inherits every one of those guarantees instead of growing a
+ * second parser that has to be kept in step with the first.
+ */
+function currentSettingsText() {
+  saveSettings();
+  return localStorage.getItem('mindtrack-settings') || '{}';
+}
+
+function showBackupStatus(msg, ok) {
+  const el = document.getElementById('backup-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = ok ? 'ok' : 'bad';
+}
+
+function fillSettingsBlob() {
+  const box = document.getElementById('settings-blob');
+  if (box) box.value = currentSettingsText();
+  showBackupStatus('', true);
+}
+
+function copySettings() {
+  const box = document.getElementById('settings-blob');
+  if (!box) return;
+  box.value = currentSettingsText();
+  box.select();
+  /* Selecting first means long-press then Copy always works, so neither
+     automatic route failing can leave the text out of reach. */
+  const manual = () => showBackupStatus('Selected - long-press and choose Copy.', true);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(box.value).then(
+      () => showBackupStatus('Copied. Paste it into Backup on the other device.', true),
+      manual);
+    return;
+  }
+  manual();
+}
+
+function importSettings() {
+  const box = document.getElementById('settings-blob');
+  if (!box) return;
+  const text = (box.value || '').trim();
+  if (!text) {
+    showBackupStatus('Nothing to import - paste the text in first.', false);
+    return;
+  }
+
+  let incoming;
+  try {
+    incoming = JSON.parse(text);
+  } catch (err) {
+    showBackupStatus('That is not settings text.', false);
+    return;
+  }
+  if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+    showBackupStatus('That is not settings text.', false);
+    return;
+  }
+
+  /* What counts as a setting is whatever saveSettings() writes, read back off
+     a fresh export rather than listed again here, so this cannot drift when a
+     setting is added. */
+  let known = [];
+  try { known = Object.keys(JSON.parse(currentSettingsText())); } catch (err) { known = []; }
+  const recognised = Object.keys(incoming).filter((k) => known.indexOf(k) >= 0);
+  if (recognised.length === 0) {
+    showBackupStatus('No settings recognised in that text - nothing changed.', false);
+    return;
+  }
+
+  /* Storage is only touched once the text has proved itself, so a bad paste
+     cannot leave the app worse off than it was. */
+  try {
+    localStorage.setItem('mindtrack-settings', JSON.stringify(incoming));
+  } catch (err) {
+    showBackupStatus('Could not save - storage is full.', false);
+    return;
+  }
+  loadSettings();
+  syncLayoutControls();
+  applyAllSettings();
+  showBackupStatus('Imported ' + recognised.length +
+    (recognised.length === 1 ? ' setting.' : ' settings.'), true);
+}
+
 function applyAllSettings() {
   applyLayout();
   applyGlassMode();
@@ -1138,6 +1234,8 @@ function openSettings() {
   rollbackTimer = null;
   stopRollAnimation();
   showScreen('screen-secret');
+  // Always show what is actually stored right now, not a stale export.
+  fillSettingsBlob();
 }
 
 // ── HELPERS ──
@@ -1417,6 +1515,11 @@ document.addEventListener('DOMContentLoaded', () => {
     .addEventListener('touchend', scheduleCountback);
 
   // ── CLOSE SETTINGS ──
+  document.getElementById('copy-settings-btn')
+    .addEventListener('click', copySettings);
+  document.getElementById('import-settings-btn')
+    .addEventListener('click', importSettings);
+
   document.getElementById('close-secret-btn')
     .addEventListener('click', () => {
       applyAllSettings();

@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Clock</title>
-  <link rel="stylesheet" href="style.css?v=43">
+  <link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
 
@@ -370,13 +370,34 @@
         </div>
       </div>
 
+      <!--
+        BACKUP - settings live in localStorage, which is scoped to one browser
+        and one install. A layout tuned in the installed app is invisible to a
+        kiosk browser on the same phone, and to a second phone entirely. This
+        is the way across: copy the text out, paste it in over there.
+      -->
+      <div class="settings-section">
+        <div class="section-title">Backup</div>
+        <div id="backup-note">
+          Everything except the custom wallpaper photo, which is far too large to paste.
+        </div>
+        <textarea id="settings-blob" rows="4" spellcheck="false"
+                  autocapitalize="off" autocomplete="off" autocorrect="off"
+                  placeholder="Paste settings here, then tap Import"></textarea>
+        <div id="backup-buttons">
+          <button id="copy-settings-btn">Copy</button>
+          <button id="import-settings-btn">Import</button>
+        </div>
+        <div id="backup-status"></div>
+      </div>
+
       <div id="status-text">Not set</div>
       <button id="close-secret-btn">Close Settings</button>
 
     </div>
   </div>
 
-  <script src="script.js?v=43"></script>
+  <script src="script.js?v=44"></script>
   <script>
     /*
      * Registers the precaching worker. Only runs in a secure context — over

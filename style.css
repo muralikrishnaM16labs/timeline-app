@@ -1191,3 +1191,61 @@ body.peeking .peek-active .layout-head label::before {
   content: attr(data-group) " · ";
   opacity: 0.5;
 }
+
+/* ── BACKUP ─────────────────────────────────────────────────────────────── */
+#backup-note {
+  font-size: 11px;
+  color: #666;
+  padding: 10px 16px 0;
+  line-height: 1.45;
+  font-family: var(--font-ui);
+}
+
+#settings-blob {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 32px);
+  margin: 10px 16px 0;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #141414;
+  color: #9a9a9a;
+  /* Monospace and wrapped: the text is one long JSON line and this is the only
+     way to see that all of it is there before copying. */
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  resize: vertical;
+  word-break: break-all;
+}
+
+#backup-buttons {
+  display: flex;
+  gap: 10px;
+  margin: 10px 16px 0;
+}
+
+#backup-buttons button {
+  flex: 1;
+  box-sizing: border-box;
+  padding: 9px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #1e1e1e;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+}
+
+#backup-status {
+  min-height: 15px;
+  font-size: 11px;
+  padding: 8px 16px 12px;
+  line-height: 1.4;
+  font-family: var(--font-ui);
+}
+
+#backup-status.ok  { color: #4ade80; }
+#backup-status.bad { color: #f87171; }
