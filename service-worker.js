@@ -14,13 +14,13 @@
  * Bump CACHE whenever the ?v= query strings in index.html change, or stale
  * assets will be served from the old cache.
  */
-const CACHE = 'clock-v41';
+const CACHE = 'clock-v43';
 
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=41',
-  './script.js?v=41',
+  './style.css?v=43',
+  './script.js?v=43',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

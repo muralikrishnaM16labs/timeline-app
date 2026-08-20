@@ -72,7 +72,7 @@ const LAYOUT_CONFIG = [
   { key: 'clockSide',     css: '--clock-side',        label: 'Side Inset',  group: 'Clock',        axis: 'w',     pct:  6.67, max: 30 },
   { key: 'dateSize',      css: '--date-size',         label: 'Date Size',   group: 'Clock',        axis: 'w',     pct:  4.36, max: 10 },
   { key: 'dateGap',       css: '--date-gap',          label: 'Date → Clock',group: 'Clock',        axis: 'h',     pct:  0.36, max:  6 },
-  { key: 'clockWeight',   css: '--clock-weight',      label: 'Weight',      group: 'Clock',        axis: 'raw',   pct: 600,   min: 100, max: 900, step: 50 },
+  { key: 'clockWeight',   css: '--clock-weight',      label: 'Weight',      group: 'Clock',        axis: 'raw',   pct: 800,   min: 100, max: 900, step: 50 },
   { key: 'clockTracking', css: '--clock-tracking',    label: 'Tracking',    group: 'Clock',        axis: 'em',    pct: -3.33, min: -8,  max: 3 },
   { key: 'clockOpacity',  css: '--clock-opacity',     label: 'Opacity',     group: 'Clock',        axis: 'ratio', pct: 100,   min: 10,  max: 100, step: 1 },
   { key: 'glassFill',     css: '--clock-glass-fill',  label: 'Glass Fill',  group: 'Clock',        axis: 'ratio', pct:  55,   min:  5,  max: 100, step: 1 },
@@ -143,6 +143,76 @@ function resolveValue(c) {
 }
 
 /* One row: label, live readout, slider. */
+/*
+ * PEEK PREVIEW
+ *
+ * The settings panel is an opaque sheet over the whole display, so dragging a
+ * layout slider moved the lock screen where it could not be seen — tuning
+ * meant open, drag, close, look, reopen. Nothing was wrong with the values:
+ * applyLayout() has always run on 'input'. Only the view was missing.
+ *
+ * So while a slider is being worked the panel steps aside and the real lock
+ * screen shows through, at real size. The size is the point: every number here
+ * is a percentage of the live viewport, so a shrunken or half-height preview
+ * would misreport every one of them.
+ */
+const PEEK_LINGER_MS = 600;
+/* Items that live in the bottom half of the screen. The floating row is put at
+   the opposite end so it never covers the thing being adjusted. */
+const PEEK_LOWER_GROUPS = ['Torch', 'Camera', 'Home Bar'];
+const PEEK_CLASSES = ['peek-active', 'peek-top', 'peek-bottom'];
+
+let peekRow   = null;
+let peekTimer = null;
+let peekHeld  = false;
+
+function startPeek(row, group) {
+  if (peekTimer) { clearTimeout(peekTimer); peekTimer = null; }
+  if (peekRow && peekRow !== row) peekRow.classList.remove.apply(peekRow.classList, PEEK_CLASSES);
+  peekRow = row;
+  row.classList.add('peek-active');
+  row.classList.add(PEEK_LOWER_GROUPS.indexOf(group) >= 0 ? 'peek-top' : 'peek-bottom');
+  /* showScreen() hid the home screen when settings opened; it is the preview,
+     so bring it back behind the panel. */
+  document.getElementById('screen-home').style.display = 'flex';
+  document.body.classList.add('peeking');
+  syncCanvasColor();
+}
+
+/* Never end a peek while the finger is still down — a slow drag can easily
+   pause for longer than the linger. */
+function endPeekSoon() {
+  if (peekHeld) return;
+  if (peekTimer) clearTimeout(peekTimer);
+  peekTimer = setTimeout(endPeek, PEEK_LINGER_MS);
+}
+
+/* Classes only. Used on its own by showScreen(), which sets every screen's
+   display itself immediately afterwards and must not be second-guessed. */
+function clearPeekClasses() {
+  if (peekTimer) { clearTimeout(peekTimer); peekTimer = null; }
+  peekHeld = false;
+  document.body.classList.remove('peeking');
+  if (peekRow) {
+    peekRow.classList.remove.apply(peekRow.classList, PEEK_CLASSES);
+    peekRow = null;
+  }
+}
+
+function endPeek() {
+  const wasPeeking = document.body.classList.contains('peeking');
+  clearPeekClasses();
+  if (wasPeeking && currentScreen === 'screen-secret') {
+    document.getElementById('screen-home').style.display = 'none';
+  }
+  syncCanvasColor();
+}
+
+function releasePeek() {
+  peekHeld = false;
+  endPeekSoon();
+}
+
 function buildLayoutRow(c) {
   const row = document.createElement('div');
   row.className = 'secret-row layout-row';
@@ -152,6 +222,9 @@ function buildLayoutRow(c) {
 
   const label = document.createElement('label');
   label.textContent = c.label;
+  /* Floating over the wallpaper, "Size" alone does not say size of what. The
+     group name is only prefixed while peeking, via CSS. */
+  label.dataset.group = c.group;
 
   const out = document.createElement('span');
   out.className = 'pct-out';
@@ -173,10 +246,20 @@ function buildLayoutRow(c) {
   slider.addEventListener('input', () => {
     layoutPct[c.key] = parseFloat(slider.value) || 0;
     applyLayout();
+    /* Also opened from the value change, not just the touch: arrow keys never
+       produce a pointerdown. Re-arming every frame is what keeps a drag alive. */
+    startPeek(row, c.group);
+    endPeekSoon();
   });
   // Writing to storage on every drag frame would be wasteful; once the finger
   // lifts is enough.
   slider.addEventListener('change', saveSettings);
+
+  /* The finger going down opens the peek before the value has even moved, so
+     the lock screen is already in view for the first pixel of the drag. */
+  slider.addEventListener('pointerdown', () => { peekHeld = true; startPeek(row, c.group); });
+  slider.addEventListener('pointerup', releasePeek);
+  slider.addEventListener('pointercancel', releasePeek);
 
   row.appendChild(head);
   row.appendChild(slider);
@@ -418,12 +501,16 @@ function sampleImageEdgeColor(url) {
  * is tinted to match rather than staying black.
  */
 function syncCanvasColor() {
-  const root   = document.documentElement;
-  const onHome = currentScreen === 'screen-home';
+  const root = document.documentElement;
+  /* A peek shows the real lock screen through the settings panel, so for its
+     duration the root has to dress as the home screen — otherwise the panel's
+     flat #0a0a0a stays behind the wallpaper and shows as a border round it. */
+  const peeking = document.body.classList.contains('peeking');
+  const onHome  = peeking || currentScreen === 'screen-home';
 
   let color = '#000';                              // passcode screen
-  if (currentScreen === 'screen-secret') color = '#0a0a0a';
-  else if (onHome)                       color = wallpaperEdgeColor;
+  if (!peeking && currentScreen === 'screen-secret') color = '#0a0a0a';
+  else if (onHome)                                   color = wallpaperEdgeColor;
 
   root.style.backgroundColor = color;
   // Only the home screen shows the wallpaper, so the root only carries the
@@ -483,6 +570,7 @@ function setWallpaperBackground(value, isImage) {
 
 // ── SCREEN MANAGER ──
 function showScreen(id) {
+  clearPeekClasses();
   document.getElementById('screen-pin').style.display    = 'none';
   document.getElementById('screen-home').style.display   = 'none';
   document.getElementById('screen-secret').style.display = 'none';
@@ -1239,6 +1327,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto follows the device, so a rotation or a resized window has to re-run
   // the match instead of keeping the figures it started with.
+  /* A drag released off the edge of the slider still has to close the peek. */
+  window.addEventListener('pointerup', releasePeek);
+  window.addEventListener('pointercancel', releasePeek);
   window.addEventListener('resize', applyLayout);
   window.addEventListener('orientationchange', applyLayout);
 

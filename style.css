@@ -495,7 +495,10 @@ body {
 #clock-date {
   font-size: var(--date-size);
   color: rgba(255, 255, 255, 0.92);
-  font-weight: 400;
+  /* Semibold, not regular. On the real lock screen the date is noticeably
+     heavier than body text; at regular it reads as a caption floating above
+     the clock rather than part of the same block. */
+  font-weight: 600;
   letter-spacing: 0.2px;
   font-family: var(--font-ui);
 }
@@ -1117,4 +1120,74 @@ body {
   background: #2a2a2a;
   border-color: #8b5cf6;
   color: #c4b5fd;
+}
+
+/* ── PEEK PREVIEW ─────────────────────────────────────────────────────────
+ *
+ * While a layout slider is being dragged the settings sheet steps aside so the
+ * real lock screen can be seen changing underneath it. See the note above
+ * startPeek() in script.js for why the preview has to be the real screen at
+ * real size rather than a scaled-down mockup.
+ *
+ * visibility, not opacity. An ancestor with opacity < 1 forces its opacity onto
+ * every descendant, so the one row being dragged would fade out along with the
+ * panel it lives in — a descendant cannot opt back out. visibility is settable
+ * per element, so a hidden ancestor can hold a visible child. It also leaves
+ * every box where it was, so the sheet does not reflow behind the preview, and
+ * hidden elements stop taking pointer events while the sheet itself keeps
+ * taking them — which is what stops a stray tap reaching the lock screen and
+ * starting the countback mid-adjustment.
+ */
+body.peeking #screen-secret {
+  background: transparent;
+  transition: background 0.18s ease;
+}
+
+body.peeking #secret-inner > * {
+  visibility: hidden;
+}
+
+body.peeking .layout-row.peek-active {
+  visibility: visible;
+  position: fixed;
+  z-index: 5;
+
+  /*
+   * Deliberately the SAME horizontal box as #secret-inner: width 88%, capped at
+   * 380px, centred. A range input maps the pointer's x within its own box to a
+   * value, so if pinning the row changed its width or left edge the value would
+   * jump the instant the finger touched it. Only the vertical position moves.
+   */
+  left: 0;
+  right: 0;
+  width: 88%;
+  max-width: 380px;
+  margin: 0 auto;
+
+  padding: 12px 16px 14px;
+  border-radius: 18px;
+  border-bottom: none;              /* .secret-row draws a divider; not here */
+  background: rgba(18, 18, 20, 0.72);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* Pinned to the end of the screen opposite the item being adjusted, so the
+   control never sits on top of the thing it is moving. */
+body.peeking .layout-row.peek-bottom {
+  top: auto;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+}
+
+body.peeking .layout-row.peek-top {
+  bottom: auto;
+  top: calc(env(safe-area-inset-top, 0px) + 20px);
+}
+
+/* "Size" on its own does not say size of what once the row is floating free of
+   its group heading. */
+body.peeking .peek-active .layout-head label::before {
+  content: attr(data-group) " · ";
+  opacity: 0.5;
 }
